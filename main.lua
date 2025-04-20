@@ -50,6 +50,11 @@ function love.load()
 		duration = 1.5, -- Delay duration in seconds
 		flashInterval = 0.25, -- Flash toggle every 0.25 seconds
 	}
+
+	-- Load sound effects
+	soundPaddle = love.audio.newSource("sounds/paddle_hit.wav", "static")
+	soundWall = love.audio.newSource("sounds/wall_bounce.wav", "static")
+	soundScore = love.audio.newSource("sounds/score.wav", "static")
 end
 
 -- Reset ball to center and start serve delay
@@ -123,19 +128,23 @@ function love.update(dt)
 	if ball.y - ball.radius < 0 then
 		ball.y = ball.radius
 		ball.speedY = -ball.speedY
+		love.audio.play(soundWall) -- Play wall bounce sound
 	elseif ball.y + ball.radius > 600 then
 		ball.y = 600 - ball.radius
 		ball.speedY = -ball.speedY
+		love.audio.play(soundWall) -- Play wall bounce sound
 	end
 
 	-- Handle left/right court edges (scoring)
 	if ball.x < 0 then
 		-- Ball passed left edge: CPU scores
 		score.cpu = score.cpu + 1
+		love.audio.play(soundScore) -- Play score sound
 		resetBall()
 	elseif ball.x > 800 then
 		-- Ball passed right edge: Player scores
 		score.player = score.player + 1
+		love.audio.play(soundScore) -- Play score sound
 		resetBall()
 	end
 
@@ -153,6 +162,7 @@ function love.update(dt)
 		local hitPos = (ball.y - paddleLeft.y) / paddleLeft.height
 		local maxAngle = 300
 		ball.speedY = (hitPos - 0.5) * 2 * maxAngle
+		love.audio.play(soundPaddle) -- Play paddle hit sound
 	end
 
 	-- Right paddle
@@ -168,6 +178,7 @@ function love.update(dt)
 		local hitPos = (ball.y - paddleRight.y) / paddleRight.height
 		local maxAngle = 300
 		ball.speedY = (hitPos - 0.5) * 2 * maxAngle
+		love.audio.play(soundPaddle) -- Play paddle hit sound
 	end
 end
 
