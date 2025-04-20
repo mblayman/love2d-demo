@@ -39,6 +39,9 @@ function love.load()
 		player = 0, -- Left paddle (player)
 		cpu = 0, -- Right paddle (CPU)
 	}
+
+	-- Set up font for score display
+	scoreFont = love.graphics.newFont(24) -- Font size 24
 end
 
 -- Reset ball to center with initial speed
@@ -153,4 +156,12 @@ function love.draw()
 	-- Draw the right paddle
 	love.graphics.setColor(paddleRight.color)
 	love.graphics.rectangle("fill", paddleRight.x, paddleRight.y, paddleRight.width, paddleRight.height)
+
+	-- Draw the scores
+	love.graphics.setColor(1, 1, 1) -- White text
+	love.graphics.setFont(scoreFont)
+	-- Player score (left side)
+	love.graphics.print("Player: " .. score.player, 50, 20)
+	-- CPU score (right side)
+	love.graphics.print("CPU: " .. score.cpu, 650, 20)
 end
