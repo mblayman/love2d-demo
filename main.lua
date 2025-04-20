@@ -33,6 +33,20 @@ function love.load()
 		speed = 250, -- Pixels per second
 		color = { 1, 1, 1 }, -- White color (RGB)
 	}
+
+	-- Score tracking
+	score = {
+		player = 0, -- Left paddle (player)
+		cpu = 0, -- Right paddle (CPU)
+	}
+end
+
+-- Reset ball to center with initial speed
+function resetBall()
+	ball.x = 400 -- Center of court
+	ball.y = 300
+	ball.speedX = -200 -- Always start toward player (left)
+	ball.speedY = 200 -- Downward for consistency
 end
 
 -- Update game state
@@ -80,6 +94,17 @@ function love.update(dt)
 		ball.speedY = -ball.speedY
 	end
 
+	-- Handle left/right court edges (scoring)
+	if ball.x < 0 then
+		-- Ball passed left edge: CPU scores
+		score.cpu = score.cpu + 1
+		resetBall()
+	elseif ball.x > 800 then
+		-- Ball passed right edge: Player scores
+		score.player = score.player + 1
+		resetBall()
+	end
+
 	-- Paddle collision detection
 	-- Left paddle
 	if
@@ -89,12 +114,11 @@ function love.update(dt)
 		and ball.y <= paddleLeft.y + paddleLeft.height
 	then
 		-- Ball hit left paddle
-		ball.x = paddleLeft.x + paddleLeft.width + ball.radius -- Prevent sticking
-		ball.speedX = -ball.speedX * 1.1 -- Reverse and increase speed by 10%
-		-- Adjust vertical speed based on hit position
-		local hitPos = (ball.y - paddleLeft.y) / paddleLeft.height -- 0 (top) to 1 (bottom)
-		local maxAngle = 300 -- Max vertical speed for steep angles
-		ball.speedY = (hitPos - 0.5) * 2 * maxAngle -- Range: -maxAngle to +maxAngle
+		ball.x = paddleLeft.x + paddleLeft.width + ball.radius
+		ball.speedX = -ball.speedX * 1.1
+		local hitPos = (ball.y - paddleLeft.y) / paddleLeft.height
+		local maxAngle = 300
+		ball.speedY = (hitPos - 0.5) * 2 * maxAngle
 	end
 
 	-- Right paddle
@@ -105,12 +129,11 @@ function love.update(dt)
 		and ball.y <= paddleRight.y + paddleRight.height
 	then
 		-- Ball hit right paddle
-		ball.x = paddleRight.x - ball.radius -- Prevent sticking
-		ball.speedX = -ball.speedX * 1.1 -- Reverse and increase speed by 10%
-		-- Adjust vertical speed based on hit position
-		local hitPos = (ball.y - paddleRight.y) / paddleRight.height -- 0 (top) to 1 (bottom)
-		local maxAngle = 300 -- Max vertical speed for steep angles
-		ball.speedY = (hitPos - 0.5) * 2 * maxAngle -- Range: -maxAngle to +maxAngle
+		ball.x = paddleRight.x - ball.radius
+		ball.speedX = -ball.speedX * 1.1
+		local hitPos = (ball.y - paddleRight.y) / paddleRight.height
+		local maxAngle = 300
+		ball.speedY = (hitPos - 0.5) * 2 * maxAngle
 	end
 end
 
