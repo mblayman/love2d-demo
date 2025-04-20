@@ -9,8 +9,8 @@ function love.load()
 		x = 400, -- Center of court (800 / 2)
 		y = 300, -- Center of court (600 / 2)
 		radius = 10, -- Ball size
-		speedX = 200, -- Initial horizontal speed (pixels per second)
-		speedY = 200, -- Initial vertical speed (pixels per second)
+		speedX = 0, -- Start stationary
+		speedY = 0, -- Start stationary
 		color = { 1, 1, 1 }, -- White color (RGB)
 	}
 
@@ -42,13 +42,27 @@ function love.load()
 
 	-- Set up font for score display
 	scoreFont = love.graphics.newFont(24) -- Font size 24
+
+	-- Serve delay properties
+	serveDelay = {
+		active = true, -- Start with delay for initial serve
+		timer = 0, -- Current time in delay
+		duration = 1.5, -- Delay duration in seconds
+	}
 end
 
--- Reset ball to center with random direction
+-- Reset ball to center and start serve delay
 function resetBall()
 	ball.x = 400 -- Center of court
 	ball.y = 300
-	-- Randomize direction with consistent speed
+	ball.speedX = 0 -- Stationary during delay
+	ball.speedY = 0
+	serveDelay.active = true -- Start delay
+	serveDelay.timer = 0 -- Reset timer
+end
+
+-- Start the ball with random direction
+function startBall()
 	local speed = 200 -- Total speed (pixels per second)
 	local angle = love.math.random() * math.pi / 3 + math.pi / 9 -- Random angle between 20° and 70°
 	if love.math.random() < 0.5 then
@@ -56,6 +70,7 @@ function resetBall()
 	end
 	ball.speedX = math.cos(angle) * speed
 	ball.speedY = math.sin(angle) * speed
+	serveDelay.active = false -- End delay
 end
 
 -- Update game state
@@ -73,6 +88,15 @@ function love.update(dt)
 		paddleLeft.y = 0
 	elseif paddleLeft.y + paddleLeft.height > 600 then
 		paddleLeft.y = 600 - paddleLeft.height
+	end
+
+	-- Handle serve delay
+	if serveDelay.active then
+		serveDelay.timer = serveDelay.timer + dt
+		if serveDelay.timer >= serveDelay.duration then
+			startBall() -- Start ball after delay
+		end
+		return -- Skip ball movement, CPU movement, and collisions during delay
 	end
 
 	-- Move right paddle (CPU) to track ball
