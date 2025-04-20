@@ -145,6 +145,15 @@ function love.draw()
 	-- Set background color to black
 	love.graphics.setBackgroundColor(0, 0, 0)
 
+	-- Draw the net (dashed centerline)
+	love.graphics.setColor(1, 1, 1) -- White
+	local dashHeight = 20 -- Height of each dash
+	local gapHeight = 20 -- Gap between dashes
+	local x = 400 -- Center of court
+	for y = 0, 600 - dashHeight, dashHeight + gapHeight do
+		love.graphics.rectangle("fill", x - 2, y, 4, dashHeight) -- 4x20 rectangles
+	end
+
 	-- Draw the ball
 	love.graphics.setColor(ball.color)
 	love.graphics.circle("fill", ball.x, ball.y, ball.radius)
@@ -160,8 +169,6 @@ function love.draw()
 	-- Draw the scores
 	love.graphics.setColor(1, 1, 1) -- White text
 	love.graphics.setFont(scoreFont)
-	-- Player score (left side)
 	love.graphics.print("Player: " .. score.player, 50, 20)
-	-- CPU score (right side)
 	love.graphics.print("CPU: " .. score.cpu, 650, 20)
 end
