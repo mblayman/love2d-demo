@@ -44,12 +44,18 @@ function love.load()
 	scoreFont = love.graphics.newFont(24) -- Font size 24
 end
 
--- Reset ball to center with initial speed
+-- Reset ball to center with random direction
 function resetBall()
 	ball.x = 400 -- Center of court
 	ball.y = 300
-	ball.speedX = -200 -- Always start toward player (left)
-	ball.speedY = 200 -- Downward for consistency
+	-- Randomize direction with consistent speed
+	local speed = 200 -- Total speed (pixels per second)
+	local angle = love.math.random() * math.pi / 3 + math.pi / 9 -- Random angle between 20° and 70°
+	if love.math.random() < 0.5 then
+		angle = angle + math.pi -- Mirror to left side (200° to 250°) 50% of the time
+	end
+	ball.speedX = math.cos(angle) * speed
+	ball.speedY = math.sin(angle) * speed
 end
 
 -- Update game state
