@@ -48,6 +48,7 @@ function love.load()
 		active = true, -- Start with delay for initial serve
 		timer = 0, -- Current time in delay
 		duration = 1.5, -- Delay duration in seconds
+		flashInterval = 0.25, -- Flash toggle every 0.25 seconds
 	}
 end
 
@@ -184,9 +185,11 @@ function love.draw()
 		love.graphics.rectangle("fill", x - 2, y, 4, dashHeight) -- 4x20 rectangles
 	end
 
-	-- Draw the ball
+	-- Draw the ball (flash during serve delay)
 	love.graphics.setColor(ball.color)
-	love.graphics.circle("fill", ball.x, ball.y, ball.radius)
+	if not serveDelay.active or math.floor(serveDelay.timer / serveDelay.flashInterval) % 2 == 0 then
+		love.graphics.circle("fill", ball.x, ball.y, ball.radius)
+	end
 
 	-- Draw the left paddle
 	love.graphics.setColor(paddleLeft.color)
