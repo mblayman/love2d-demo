@@ -42,6 +42,7 @@ function love.load()
 
 	-- Set up font for score display
 	scoreFont = love.graphics.newFont(24) -- Font size 24
+	winFont = love.graphics.newFont(48) -- Larger font for win message
 
 	-- Serve delay properties
 	serveDelay = {
@@ -49,6 +50,13 @@ function love.load()
 		timer = 0, -- Current time in delay
 		duration = 1.5, -- Delay duration in seconds
 		flashInterval = 0.25, -- Flash toggle every 0.25 seconds
+	}
+
+	-- Game state
+	gameState = {
+		playing = true, -- Whether the game is active
+		winner = nil, -- "player" or "cpu" when game ends
+		maxScore = 7, -- Score needed to win
 	}
 
 	-- Load sound effects
@@ -67,6 +75,17 @@ function resetBall()
 	serveDelay.timer = 0 -- Reset timer
 end
 
+-- Reset the entire game state
+function resetGame()
+	score.player = 0
+	score.cpu = 0
+	paddleLeft.y = 250
+	paddleRight.y = 250
+	resetBall()
+	gameState.playing = true
+	gameState.winner = nil
+end
+
 -- Start the ball with random direction
 function startBall()
 	local speed = 200 -- Total speed (pixels per second)
@@ -81,6 +100,11 @@ end
 
 -- Update game state
 function love.update(dt)
+	-- Skip gameplay updates if game is over
+	if not gameState.playing then
+		return
+	end
+
 	-- Move left paddle (player) based on arrow key input
 	if love.keyboard.isDown("up") then
 		paddleLeft.y = paddleLeft.y - paddleLeft.speed * dt
@@ -140,12 +164,22 @@ function love.update(dt)
 		-- Ball passed left edge: CPU scores
 		score.cpu = score.cpu + 1
 		love.audio.play(soundScore) -- Play score sound
-		resetBall()
+		if score.cpu >= gameState.maxScore then
+			gameState.playing = false
+			gameState.winner = "cpu"
+		else
+			resetBall()
+		end
 	elseif ball.x > 800 then
 		-- Ball passed right edge: Player scores
 		score.player = score.player + 1
 		love.audio.play(soundScore) -- Play score sound
-		resetBall()
+		if score.player >= gameState.maxScore then
+			gameState.playing = false
+			gameState.winner = "player"
+		else
+			resetBall()
+		end
 	end
 
 	-- Paddle collision detection
@@ -182,6 +216,13 @@ function love.update(dt)
 	end
 end
 
+-- Handle key presses for game restart
+function love.keypressed(key)
+	if not gameState.playing and key == "r" then
+		resetGame()
+	end
+end
+
 -- Draw the court
 function love.draw()
 	-- Set background color to black
@@ -215,4 +256,13 @@ function love.draw()
 	love.graphics.setFont(scoreFont)
 	love.graphics.print("Player: " .. score.player, 50, 20)
 	love.graphics.print("CPU: " .. score.cpu, 650, 20)
+
+	-- Draw win message if game is over
+	if not gameState.playing then
+		love.graphics.setFont(winFont)
+		local message = gameState.winner == "player" and "Player Wins!" or "CPU Wins!"
+		love.graphics.print(message, 250, 250) -- Centered horizontally, middle of court
+		love.graphics.setFont(scoreFont)
+		love.graphics.print("Press R to Restart", 300, 350) -- Below win message
+	end
 end
