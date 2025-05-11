@@ -4,7 +4,7 @@ function love.load()
 	love.window.setMode(800, 600)
 
 	-- Load background image
-	backgroundImage = love.graphics.newImage("assets/background.png") -- Adjust path as needed
+	backgroundImage = love.graphics.newImage("assets/background.png")
 
 	-- Ball properties
 	ball = {
@@ -42,9 +42,9 @@ function love.load()
 	gameState = { playing = true, winner = nil, maxScore = 7 }
 	serveDelay = { active = true, timer = 0, duration = 1.5, flashInterval = 0.25 }
 
-	-- Fonts
-	scoreFont = love.graphics.newFont(24)
-	winFont = love.graphics.newFont(48)
+	-- Load custom font
+	scoreFont = love.graphics.newFont("assets/myfont.ttf", 36) -- Custom font for scores
+	winFont = love.graphics.newFont("assets/myfont.ttf", 48) -- Custom font for win message
 
 	-- Load sound effects and music
 	soundPaddle = love.audio.newSource("sounds/paddle_hit.wav", "static")
@@ -208,9 +208,9 @@ end
 function love.draw()
 	-- Draw background image, scaled to fill height and cropped horizontally
 	love.graphics.setBackgroundColor(0, 0, 0)
-	local scale = 600 / 1024 -- Scale factor to fit height
-	local scaledWidth = 1536 * scale -- Width after scaling (~900 pixels)
-	local offsetX = -(scaledWidth - 800) / 2 -- Center horizontally (~-50 pixels)
+	local scale = 600 / 1024
+	local scaledWidth = 1536 * scale
+	local offsetX = -(scaledWidth - 800) / 2
 	love.graphics.draw(backgroundImage, offsetX, 0, 0, scale, scale)
 
 	-- Draw game elements
@@ -222,10 +222,24 @@ function love.draw()
 	love.graphics.rectangle("fill", paddleLeft.x, paddleLeft.y, paddleLeft.width, paddleLeft.height)
 	love.graphics.setColor(paddleRight.color)
 	love.graphics.rectangle("fill", paddleRight.x, paddleRight.y, paddleRight.width, paddleRight.height)
-	love.graphics.setColor(1, 1, 1)
+
+	-- Draw scores with shadow effect
 	love.graphics.setFont(scoreFont)
-	love.graphics.print("Player: " .. score.player, 50, 20)
-	love.graphics.print("CPU: " .. score.cpu, 650, 20)
+	-- Player score with shadow
+	love.graphics.setColor(0, 0, 0)
+	love.graphics.print("Player: " .. score.player, 80 + 2, 40 + 2)
+	love.graphics.setColor(1, 1, 1)
+	love.graphics.print("Player: " .. score.player, 80, 40)
+	-- CPU score with shadow
+	local cpuScoreText = "CPU: " .. score.cpu
+	local textWidth = scoreFont:getWidth(cpuScoreText)
+	local cpuScoreX = 720 - textWidth
+	love.graphics.setColor(0, 0, 0)
+	love.graphics.print(cpuScoreText, cpuScoreX + 2, 40 + 2)
+	love.graphics.setColor(1, 1, 1)
+	love.graphics.print(cpuScoreText, cpuScoreX, 40)
+
+	-- Draw win message
 	if not gameState.playing then
 		love.graphics.setFont(winFont)
 		local message = gameState.winner == "player" and "Player Wins!" or "CPU Wins!"
