@@ -3,6 +3,9 @@ function love.load()
 	love.window.setTitle("Pong Clone")
 	love.window.setMode(800, 600)
 
+	-- Load background image
+	backgroundImage = love.graphics.newImage("assets/background.png") -- Adjust path as needed
+
 	-- Ball properties
 	ball = {
 		x = 400,
@@ -43,16 +46,14 @@ function love.load()
 	scoreFont = love.graphics.newFont(24)
 	winFont = love.graphics.newFont(48)
 
-	-- Load sound effects
+	-- Load sound effects and music
 	soundPaddle = love.audio.newSource("sounds/paddle_hit.wav", "static")
 	soundWall = love.audio.newSource("sounds/wall_bounce.wav", "static")
 	soundScore = love.audio.newSource("sounds/score.wav", "static")
-
-	-- Load background music
 	backgroundMusic = love.audio.newSource("sounds/background.mp3", "stream")
-	backgroundMusic:setLooping(true) -- Enable seamless looping
-	backgroundMusic:setVolume(0.5) -- 50% volume to avoid overpowering sound effects
-	backgroundMusic:play() -- Start music immediately
+	backgroundMusic:setLooping(true)
+	backgroundMusic:setVolume(0.5)
+	backgroundMusic:play()
 end
 
 -- Reset ball to center and start serve delay
@@ -73,7 +74,6 @@ function resetGame()
 	resetBall()
 	gameState.playing = true
 	gameState.winner = nil
-	-- Resume background music
 	if not backgroundMusic:isPlaying() then
 		backgroundMusic:play()
 	end
@@ -94,17 +94,14 @@ end
 -- Update game state
 function love.update(dt)
 	if not gameState.playing then
-		-- Pause music during game over
 		if backgroundMusic:isPlaying() then
 			backgroundMusic:pause()
 		end
 		return
 	end
 
-	-- Reset collision flag each frame
 	ball.lastHitPaddle = nil
 
-	-- Player paddle movement
 	if love.keyboard.isDown("up") then
 		paddleLeft.y = paddleLeft.y - paddleLeft.speed * dt
 	elseif love.keyboard.isDown("down") then
@@ -112,7 +109,6 @@ function love.update(dt)
 	end
 	paddleLeft.y = math.max(0, math.min(600 - paddleLeft.height, paddleLeft.y))
 
-	-- Serve delay
 	if serveDelay.active then
 		serveDelay.timer = serveDelay.timer + dt
 		if serveDelay.timer >= serveDelay.duration then
@@ -121,7 +117,6 @@ function love.update(dt)
 		return
 	end
 
-	-- CPU paddle movement
 	local targetY = ball.y - paddleRight.height / 2
 	if paddleRight.y + paddleRight.height / 2 < targetY then
 		paddleRight.y = paddleRight.y + paddleRight.speed * dt
@@ -130,11 +125,9 @@ function love.update(dt)
 	end
 	paddleRight.y = math.max(0, math.min(600 - paddleRight.height, paddleRight.y))
 
-	-- Ball movement
 	ball.x = ball.x + ball.speedX * dt
 	ball.y = ball.y + ball.speedY * dt
 
-	-- Wall bounces
 	if ball.y - ball.radius < 0 then
 		ball.y = ball.radius
 		ball.speedY = -ball.speedY
@@ -145,7 +138,6 @@ function love.update(dt)
 		love.audio.play(soundWall)
 	end
 
-	-- Scoring
 	if ball.x < 0 then
 		score.cpu = score.cpu + 1
 		love.audio.play(soundScore)
@@ -166,7 +158,6 @@ function love.update(dt)
 		end
 	end
 
-	-- Left paddle collision
 	if
 		ball.lastHitPaddle == nil
 		and ball.x - ball.radius <= paddleLeft.x + paddleLeft.width
@@ -186,7 +177,6 @@ function love.update(dt)
 		love.audio.play(soundPaddle)
 	end
 
-	-- Right paddle collision
 	if
 		ball.lastHitPaddle == nil
 		and ball.x + ball.radius >= paddleRight.x
@@ -216,12 +206,14 @@ end
 
 -- Draw the court
 function love.draw()
+	-- Draw background image, scaled to fill height and cropped horizontally
 	love.graphics.setBackgroundColor(0, 0, 0)
-	love.graphics.setColor(1, 1, 1)
-	local dashHeight, gapHeight, x = 20, 20, 400
-	for y = 0, 600 - dashHeight, dashHeight + gapHeight do
-		love.graphics.rectangle("fill", x - 2, y, 4, dashHeight)
-	end
+	local scale = 600 / 1024 -- Scale factor to fit height
+	local scaledWidth = 1536 * scale -- Width after scaling (~900 pixels)
+	local offsetX = -(scaledWidth - 800) / 2 -- Center horizontally (~-50 pixels)
+	love.graphics.draw(backgroundImage, offsetX, 0, 0, scale, scale)
+
+	-- Draw game elements
 	love.graphics.setColor(ball.color)
 	if not serveDelay.active or math.floor(serveDelay.timer / serveDelay.flashInterval) % 2 == 0 then
 		love.graphics.circle("fill", ball.x, ball.y, ball.radius)
