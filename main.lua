@@ -1,169 +1,123 @@
--- Set up the game window and initial objects
 function love.load()
-	-- Configure the window
 	love.window.setTitle("Pong Clone")
-	love.window.setMode(800, 600) -- Court size: 800x600 pixels
+	love.window.setMode(800, 600)
 
 	-- Ball properties
 	ball = {
-		x = 400, -- Center of court (800 / 2)
-		y = 300, -- Center of court (600 / 2)
-		radius = 10, -- Ball size
-		speedX = 0, -- Start stationary
-		speedY = 0, -- Start stationary
-		color = { 1, 1, 1 }, -- White color (RGB)
+		x = 400,
+		y = 300,
+		radius = 10,
+		speedX = 0,
+		speedY = 0,
+		color = { 1, 1, 1 },
+		lastHitPaddle = nil, -- Prevents multiple collisions per frame
 	}
 
-	-- Left paddle properties (player-controlled)
+	-- Left paddle (player)
 	paddleLeft = {
-		x = 50, -- 50 pixels from left edge
-		y = 250, -- Start near vertical center
-		width = 20, -- Paddle width
-		height = 100, -- Paddle height
-		speed = 300, -- Pixels per second
-		color = { 1, 1, 1 }, -- White color (RGB)
+		x = 50,
+		y = 250,
+		width = 20,
+		height = 100,
+		speed = 300,
+		color = { 1, 1, 1 },
 	}
 
-	-- Right paddle properties (CPU-controlled)
+	-- Right paddle (CPU)
 	paddleRight = {
-		x = 730, -- 50 pixels from right edge (800 - 50 - 20)
-		y = 250, -- Start near vertical center
-		width = 20, -- Paddle width
-		height = 100, -- Paddle height
-		speed = 250, -- Pixels per second
-		color = { 1, 1, 1 }, -- White color (RGB)
+		x = 730,
+		y = 250,
+		width = 20,
+		height = 100,
+		speed = 250,
+		color = { 1, 1, 1 },
 	}
 
-	-- Score tracking
-	score = {
-		player = 0, -- Left paddle (player)
-		cpu = 0, -- Right paddle (CPU)
-	}
+	-- Score and game state
+	score = { player = 0, cpu = 0 }
+	gameState = { playing = true, winner = nil, maxScore = 7 }
+	serveDelay = { active = true, timer = 0, duration = 1.5, flashInterval = 0.25 }
 
-	-- Set up font for score display
-	scoreFont = love.graphics.newFont(24) -- Font size 24
-	winFont = love.graphics.newFont(48) -- Larger font for win message
-
-	-- Serve delay properties
-	serveDelay = {
-		active = true, -- Start with delay for initial serve
-		timer = 0, -- Current time in delay
-		duration = 1.5, -- Delay duration in seconds
-		flashInterval = 0.25, -- Flash toggle every 0.25 seconds
-	}
-
-	-- Game state
-	gameState = {
-		playing = true, -- Whether the game is active
-		winner = nil, -- "player" or "cpu" when game ends
-		maxScore = 7, -- Score needed to win
-	}
-
-	-- Load sound effects
+	-- Fonts and sounds (assumed to be available)
+	scoreFont = love.graphics.newFont(24)
+	winFont = love.graphics.newFont(48)
 	soundPaddle = love.audio.newSource("sounds/paddle_hit.wav", "static")
 	soundWall = love.audio.newSource("sounds/wall_bounce.wav", "static")
 	soundScore = love.audio.newSource("sounds/score.wav", "static")
 end
 
--- Reset ball to center and start serve delay
 function resetBall()
-	ball.x = 400 -- Center of court
-	ball.y = 300
-	ball.speedX = 0 -- Stationary during delay
-	ball.speedY = 0
-	serveDelay.active = true -- Start delay
-	serveDelay.timer = 0 -- Reset timer
+	ball.x, ball.y = 400, 300
+	ball.speedX, ball.speedY = 0, 0
+	serveDelay.active = true
+	serveDelay.timer = 0
+	ball.lastHitPaddle = nil
 end
 
--- Reset the entire game state
-function resetGame()
-	score.player = 0
-	score.cpu = 0
-	paddleLeft.y = 250
-	paddleRight.y = 250
-	resetBall()
-	gameState.playing = true
-	gameState.winner = nil
-end
-
--- Start the ball with random direction
 function startBall()
-	local speed = 200 -- Total speed (pixels per second)
-	local angle = love.math.random() * math.pi / 3 + math.pi / 9 -- Random angle between 20° and 70°
+	local speed = 200
+	local angle = love.math.random() * math.pi / 3 + math.pi / 9
 	if love.math.random() < 0.5 then
-		angle = angle + math.pi -- Mirror to left side (200° to 250°) 50% of the time
+		angle = angle + math.pi
 	end
 	ball.speedX = math.cos(angle) * speed
 	ball.speedY = math.sin(angle) * speed
-	serveDelay.active = false -- End delay
+	serveDelay.active = false
 end
 
--- Update game state
 function love.update(dt)
-	-- Skip gameplay updates if game is over
 	if not gameState.playing then
 		return
 	end
 
-	-- Move left paddle (player) based on arrow key input
+	-- Reset collision flag each frame
+	ball.lastHitPaddle = nil
+
+	-- Player paddle movement
 	if love.keyboard.isDown("up") then
 		paddleLeft.y = paddleLeft.y - paddleLeft.speed * dt
-	end
-	if love.keyboard.isDown("down") then
+	elseif love.keyboard.isDown("down") then
 		paddleLeft.y = paddleLeft.y + paddleLeft.speed * dt
 	end
+	paddleLeft.y = math.max(0, math.min(600 - paddleLeft.height, paddleLeft.y))
 
-	-- Keep left paddle within court bounds
-	if paddleLeft.y < 0 then
-		paddleLeft.y = 0
-	elseif paddleLeft.y + paddleLeft.height > 600 then
-		paddleLeft.y = 600 - paddleLeft.height
-	end
-
-	-- Handle serve delay
+	-- Serve delay
 	if serveDelay.active then
 		serveDelay.timer = serveDelay.timer + dt
 		if serveDelay.timer >= serveDelay.duration then
-			startBall() -- Start ball after delay
+			startBall()
 		end
-		return -- Skip ball movement, CPU movement, and collisions during delay
+		return
 	end
 
-	-- Move right paddle (CPU) to track ball
+	-- CPU paddle movement
 	local targetY = ball.y - paddleRight.height / 2
 	if paddleRight.y + paddleRight.height / 2 < targetY then
 		paddleRight.y = paddleRight.y + paddleRight.speed * dt
 	elseif paddleRight.y + paddleRight.height / 2 > targetY then
 		paddleRight.y = paddleRight.y - paddleRight.speed * dt
 	end
+	paddleRight.y = math.max(0, math.min(600 - paddleRight.height, paddleRight.y))
 
-	-- Keep right paddle within court bounds
-	if paddleRight.y < 0 then
-		paddleRight.y = 0
-	elseif paddleRight.y + paddleRight.height > 600 then
-		paddleRight.y = 600 - paddleRight.height
-	end
-
-	-- Move ball
+	-- Ball movement
 	ball.x = ball.x + ball.speedX * dt
 	ball.y = ball.y + ball.speedY * dt
 
-	-- Bounce off top and bottom court edges
+	-- Wall bounces
 	if ball.y - ball.radius < 0 then
 		ball.y = ball.radius
 		ball.speedY = -ball.speedY
-		love.audio.play(soundWall) -- Play wall bounce sound
+		love.audio.play(soundWall)
 	elseif ball.y + ball.radius > 600 then
 		ball.y = 600 - ball.radius
 		ball.speedY = -ball.speedY
-		love.audio.play(soundWall) -- Play wall bounce sound
+		love.audio.play(soundWall)
 	end
 
-	-- Handle left/right court edges (scoring)
+	-- Scoring
 	if ball.x < 0 then
-		-- Ball passed left edge: CPU scores
 		score.cpu = score.cpu + 1
-		love.audio.play(soundScore) -- Play score sound
+		love.audio.play(soundScore)
 		if score.cpu >= gameState.maxScore then
 			gameState.playing = false
 			gameState.winner = "cpu"
@@ -171,9 +125,8 @@ function love.update(dt)
 			resetBall()
 		end
 	elseif ball.x > 800 then
-		-- Ball passed right edge: Player scores
 		score.player = score.player + 1
-		love.audio.play(soundScore) -- Play score sound
+		love.audio.play(soundScore)
 		if score.player >= gameState.maxScore then
 			gameState.playing = false
 			gameState.winner = "player"
@@ -182,44 +135,44 @@ function love.update(dt)
 		end
 	end
 
-	-- Paddle collision detection
-	-- Left paddle
+	-- Left paddle collision
 	if
-		ball.x - ball.radius <= paddleLeft.x + paddleLeft.width
+		ball.lastHitPaddle == nil
+		and ball.x - ball.radius <= paddleLeft.x + paddleLeft.width
 		and ball.x + ball.radius >= paddleLeft.x
 		and ball.y >= paddleLeft.y
 		and ball.y <= paddleLeft.y + paddleLeft.height
 	then
-		-- Ball hit left paddle
-		ball.x = paddleLeft.x + paddleLeft.width + ball.radius
-		ball.speedX = -ball.speedX * 1.1
+		ball.lastHitPaddle = "left"
+		ball.x = paddleLeft.x + paddleLeft.width + ball.radius + 5 -- Buffer to prevent sticking
 		local hitPos = (ball.y - paddleLeft.y) / paddleLeft.height
-		local maxAngle = 300
-		ball.speedY = (hitPos - 0.5) * 2 * maxAngle
-		love.audio.play(soundPaddle) -- Play paddle hit sound
+		local max_angle = math.pi / 4 -- 45° max bounce angle
+		local bounce_angle = (hitPos - 0.5) * 2 * max_angle
+		local current_speed = math.sqrt(ball.speedX ^ 2 + ball.speedY ^ 2)
+		local new_speed = current_speed * 1.15 -- 15% speed increase
+		ball.speedX = math.cos(bounce_angle) * new_speed -- Rightward
+		ball.speedY = math.sin(bounce_angle) * new_speed
+		love.audio.play(soundPaddle)
 	end
 
-	-- Right paddle
+	-- Right paddle collision
 	if
-		ball.x + ball.radius >= paddleRight.x
+		ball.lastHitPaddle == nil
+		and ball.x + ball.radius >= paddleRight.x
 		and ball.x - ball.radius <= paddleRight.x + paddleRight.width
 		and ball.y >= paddleRight.y
 		and ball.y <= paddleRight.y + paddleRight.height
 	then
-		-- Ball hit right paddle
-		ball.x = paddleRight.x - ball.radius
-		ball.speedX = -ball.speedX * 1.1
+		ball.lastHitPaddle = "right"
+		ball.x = paddleRight.x - ball.radius - 5 -- Buffer to prevent sticking
 		local hitPos = (ball.y - paddleRight.y) / paddleRight.height
-		local maxAngle = 300
-		ball.speedY = (hitPos - 0.5) * 2 * maxAngle
-		love.audio.play(soundPaddle) -- Play paddle hit sound
-	end
-end
-
--- Handle key presses for game restart
-function love.keypressed(key)
-	if not gameState.playing and key == "r" then
-		resetGame()
+		local max_angle = math.pi / 4 -- 45° max bounce angle
+		local bounce_angle = (hitPos - 0.5) * 2 * max_angle
+		local current_speed = math.sqrt(ball.speedX ^ 2 + ball.speedY ^ 2)
+		local new_speed = current_speed * 1.15 -- 15% speed increase
+		ball.speedX = -math.cos(bounce_angle) * new_speed -- Leftward
+		ball.speedY = math.sin(bounce_angle) * new_speed
+		love.audio.play(soundPaddle)
 	end
 end
 
