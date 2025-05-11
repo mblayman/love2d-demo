@@ -1,3 +1,4 @@
+-- Set up the game window and initial objects
 function love.load()
 	love.window.setTitle("Pong Clone")
 	love.window.setMode(800, 600)
@@ -10,7 +11,7 @@ function love.load()
 		speedX = 0,
 		speedY = 0,
 		color = { 1, 1, 1 },
-		lastHitPaddle = nil, -- Prevents multiple collisions per frame
+		lastHitPaddle = nil,
 	}
 
 	-- Left paddle (player)
@@ -38,14 +39,23 @@ function love.load()
 	gameState = { playing = true, winner = nil, maxScore = 7 }
 	serveDelay = { active = true, timer = 0, duration = 1.5, flashInterval = 0.25 }
 
-	-- Fonts and sounds (assumed to be available)
+	-- Fonts
 	scoreFont = love.graphics.newFont(24)
 	winFont = love.graphics.newFont(48)
+
+	-- Load sound effects
 	soundPaddle = love.audio.newSource("sounds/paddle_hit.wav", "static")
 	soundWall = love.audio.newSource("sounds/wall_bounce.wav", "static")
 	soundScore = love.audio.newSource("sounds/score.wav", "static")
+
+	-- Load background music
+	backgroundMusic = love.audio.newSource("sounds/background.mp3", "stream")
+	backgroundMusic:setLooping(true) -- Enable seamless looping
+	backgroundMusic:setVolume(0.5) -- 50% volume to avoid overpowering sound effects
+	backgroundMusic:play() -- Start music immediately
 end
 
+-- Reset ball to center and start serve delay
 function resetBall()
 	ball.x, ball.y = 400, 300
 	ball.speedX, ball.speedY = 0, 0
@@ -54,6 +64,22 @@ function resetBall()
 	ball.lastHitPaddle = nil
 end
 
+-- Reset the entire game state
+function resetGame()
+	score.player = 0
+	score.cpu = 0
+	paddleLeft.y = 250
+	paddleRight.y = 250
+	resetBall()
+	gameState.playing = true
+	gameState.winner = nil
+	-- Resume background music
+	if not backgroundMusic:isPlaying() then
+		backgroundMusic:play()
+	end
+end
+
+-- Start the ball with random direction
 function startBall()
 	local speed = 200
 	local angle = love.math.random() * math.pi / 3 + math.pi / 9
@@ -65,8 +91,13 @@ function startBall()
 	serveDelay.active = false
 end
 
+-- Update game state
 function love.update(dt)
 	if not gameState.playing then
+		-- Pause music during game over
+		if backgroundMusic:isPlaying() then
+			backgroundMusic:pause()
+		end
 		return
 	end
 
@@ -144,13 +175,13 @@ function love.update(dt)
 		and ball.y <= paddleLeft.y + paddleLeft.height
 	then
 		ball.lastHitPaddle = "left"
-		ball.x = paddleLeft.x + paddleLeft.width + ball.radius + 5 -- Buffer to prevent sticking
+		ball.x = paddleLeft.x + paddleLeft.width + ball.radius + 5
 		local hitPos = (ball.y - paddleLeft.y) / paddleLeft.height
-		local max_angle = math.pi / 4 -- 45° max bounce angle
+		local max_angle = math.pi / 4
 		local bounce_angle = (hitPos - 0.5) * 2 * max_angle
 		local current_speed = math.sqrt(ball.speedX ^ 2 + ball.speedY ^ 2)
-		local new_speed = current_speed * 1.15 -- 15% speed increase
-		ball.speedX = math.cos(bounce_angle) * new_speed -- Rightward
+		local new_speed = current_speed * 1.15
+		ball.speedX = math.cos(bounce_angle) * new_speed
 		ball.speedY = math.sin(bounce_angle) * new_speed
 		love.audio.play(soundPaddle)
 	end
@@ -164,58 +195,50 @@ function love.update(dt)
 		and ball.y <= paddleRight.y + paddleRight.height
 	then
 		ball.lastHitPaddle = "right"
-		ball.x = paddleRight.x - ball.radius - 5 -- Buffer to prevent sticking
+		ball.x = paddleRight.x - ball.radius - 5
 		local hitPos = (ball.y - paddleRight.y) / paddleRight.height
-		local max_angle = math.pi / 4 -- 45° max bounce angle
+		local max_angle = math.pi / 4
 		local bounce_angle = (hitPos - 0.5) * 2 * max_angle
 		local current_speed = math.sqrt(ball.speedX ^ 2 + ball.speedY ^ 2)
-		local new_speed = current_speed * 1.15 -- 15% speed increase
-		ball.speedX = -math.cos(bounce_angle) * new_speed -- Leftward
+		local new_speed = current_speed * 1.15
+		ball.speedX = -math.cos(bounce_angle) * new_speed
 		ball.speedY = math.sin(bounce_angle) * new_speed
 		love.audio.play(soundPaddle)
 	end
 end
 
+-- Handle key presses for game restart
+function love.keypressed(key)
+	if not gameState.playing and key == "r" then
+		resetGame()
+	end
+end
+
 -- Draw the court
 function love.draw()
-	-- Set background color to black
 	love.graphics.setBackgroundColor(0, 0, 0)
-
-	-- Draw the net (dashed centerline)
-	love.graphics.setColor(1, 1, 1) -- White
-	local dashHeight = 20 -- Height of each dash
-	local gapHeight = 20 -- Gap between dashes
-	local x = 400 -- Center of court
+	love.graphics.setColor(1, 1, 1)
+	local dashHeight, gapHeight, x = 20, 20, 400
 	for y = 0, 600 - dashHeight, dashHeight + gapHeight do
-		love.graphics.rectangle("fill", x - 2, y, 4, dashHeight) -- 4x20 rectangles
+		love.graphics.rectangle("fill", x - 2, y, 4, dashHeight)
 	end
-
-	-- Draw the ball (flash during serve delay)
 	love.graphics.setColor(ball.color)
 	if not serveDelay.active or math.floor(serveDelay.timer / serveDelay.flashInterval) % 2 == 0 then
 		love.graphics.circle("fill", ball.x, ball.y, ball.radius)
 	end
-
-	-- Draw the left paddle
 	love.graphics.setColor(paddleLeft.color)
 	love.graphics.rectangle("fill", paddleLeft.x, paddleLeft.y, paddleLeft.width, paddleLeft.height)
-
-	-- Draw the right paddle
 	love.graphics.setColor(paddleRight.color)
 	love.graphics.rectangle("fill", paddleRight.x, paddleRight.y, paddleRight.width, paddleRight.height)
-
-	-- Draw the scores
-	love.graphics.setColor(1, 1, 1) -- White text
+	love.graphics.setColor(1, 1, 1)
 	love.graphics.setFont(scoreFont)
 	love.graphics.print("Player: " .. score.player, 50, 20)
 	love.graphics.print("CPU: " .. score.cpu, 650, 20)
-
-	-- Draw win message if game is over
 	if not gameState.playing then
 		love.graphics.setFont(winFont)
 		local message = gameState.winner == "player" and "Player Wins!" or "CPU Wins!"
-		love.graphics.print(message, 250, 250) -- Centered horizontally, middle of court
+		love.graphics.print(message, 250, 250)
 		love.graphics.setFont(scoreFont)
-		love.graphics.print("Press R to Restart", 300, 350) -- Below win message
+		love.graphics.print("Press R to Restart", 300, 350)
 	end
 end
