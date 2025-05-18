@@ -42,6 +42,14 @@ function love.load()
 	gameState = { playing = true, winner = nil, maxScore = 7 }
 	serveDelay = { active = true, timer = 0, duration = 1.5, flashInterval = 0.25 }
 
+	-- Screen shake state
+	shake = {
+		intensity = 0, -- Current shake intensity (pixels)
+		maxIntensity = 5, -- Max shake intensity when triggered
+		duration = 0.2, -- Duration of shake in seconds
+		timer = 0, -- Current time elapsed during shake
+	}
+
 	-- Load custom font
 	scoreFont = love.graphics.newFont("assets/myfont.ttf", 36) -- Custom font for scores
 	winFont = love.graphics.newFont("assets/myfont.ttf", 48) -- Custom font for win message
@@ -171,6 +179,16 @@ function love.update(dt)
 	particleRightFast:update(dt)
 	particleRightGlow:update(dt)
 
+	-- Update screen shake
+	if shake.timer > 0 then
+		shake.timer = shake.timer - dt
+		-- Linearly decay intensity over the duration
+		shake.intensity = shake.maxIntensity * (shake.timer / shake.duration)
+		if shake.timer <= 0 then
+			shake.intensity = 0
+		end
+	end
+
 	if serveDelay.active then
 		serveDelay.timer = serveDelay.timer + dt
 		if serveDelay.timer >= serveDelay.duration then
@@ -239,9 +257,12 @@ function love.update(dt)
 		love.audio.play(soundPaddle)
 		-- Emit particles at the point of contact
 		particleLeftFast:setPosition(paddleLeft.x + paddleLeft.width, ball.y)
-		particleLeftFast:emit(40) -- Increased to 40 fast sparks
+		particleLeftFast:emit(40) -- 40 fast sparks
 		particleLeftGlow:setPosition(paddleLeft.x + paddleLeft.width, ball.y)
-		particleLeftGlow:emit(3) -- Increased to 20 glow sparks
+		particleLeftGlow:emit(3) -- Reduced to 3 glow sparks as per your adjustment
+		-- Trigger screen shake
+		shake.timer = shake.duration
+		shake.intensity = shake.maxIntensity
 	end
 
 	if
@@ -263,9 +284,12 @@ function love.update(dt)
 		love.audio.play(soundPaddle)
 		-- Emit particles at the point of contact
 		particleRightFast:setPosition(paddleRight.x, ball.y)
-		particleRightFast:emit(40) -- Increased to 40 fast sparks
+		particleRightFast:emit(40) -- 40 fast sparks
 		particleRightGlow:setPosition(paddleRight.x, ball.y)
-		particleRightGlow:emit(3) -- Increased to 20 glow sparks
+		particleRightGlow:emit(3) -- Reduced to 3 glow sparks as per your adjustment
+		-- Trigger screen shake
+		shake.timer = shake.duration
+		shake.intensity = shake.maxIntensity
 	end
 end
 
@@ -278,12 +302,22 @@ end
 
 -- Draw the court
 function love.draw()
+	-- Apply screen shake by translating the entire scene
+	local offsetX, offsetY = 0, 0
+	if shake.intensity > 0 then
+		-- Random offset within the current intensity
+		offsetX = love.math.random(-shake.intensity, shake.intensity)
+		offsetY = love.math.random(-shake.intensity, shake.intensity)
+	end
+	love.graphics.push()
+	love.graphics.translate(offsetX, offsetY)
+
 	-- Draw background image, scaled to fill height and cropped horizontally
 	love.graphics.setBackgroundColor(0, 0, 0)
 	local scale = 600 / 1024
 	local scaledWidth = 1536 * scale
-	local offsetX = -(scaledWidth - 800) / 2
-	love.graphics.draw(backgroundImage, offsetX, 0, 0, scale, scale)
+	local bgOffsetX = -(scaledWidth - 800) / 2
+	love.graphics.draw(backgroundImage, bgOffsetX, 0, 0, scale, scale)
 
 	-- Draw game elements
 	love.graphics.setColor(ball.color)
@@ -326,4 +360,7 @@ function love.draw()
 		love.graphics.setFont(scoreFont)
 		love.graphics.print("Press R to Restart", 300, 350)
 	end
+
+	-- End the translation
+	love.graphics.pop()
 end
