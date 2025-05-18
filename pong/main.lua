@@ -54,6 +54,62 @@ function love.load()
 	backgroundMusic:setLooping(true)
 	backgroundMusic:setVolume(0.5)
 	backgroundMusic:play()
+
+	-- Create particle texture (8x8 white square as base)
+	local canvas = love.graphics.newCanvas(8, 8)
+	love.graphics.setCanvas(canvas)
+	love.graphics.setColor(1, 1, 1, 1)
+	love.graphics.rectangle("fill", 0, 0, 8, 8)
+	love.graphics.setCanvas()
+	particleTexture = canvas
+
+	-- Left paddle - Fast sparks (larger, neon pink to purple, very fast, short-lived)
+	particleLeftFast = love.graphics.newParticleSystem(particleTexture, 300)
+	particleLeftFast:setEmissionRate(0)
+	particleLeftFast:setParticleLifetime(0.1, 0.2) -- Very short lifetime
+	particleLeftFast:setDirection(0) -- Right
+	particleLeftFast:setSpeed(300, 500) -- Much faster speed
+	particleLeftFast:setSpread(math.pi / 2) -- 90-degree spread
+	particleLeftFast:setSizes(2, 0) -- Start at 16x16 (2 * 8), shrink to 0
+	particleLeftFast:setColors(1, 0, 1, 1, 0.5, 0, 1, 0) -- Neon pink to purple
+	particleLeftFast:setLinearAcceleration(0, -150, 0, 150) -- Stronger vertical drift
+	particleLeftFast:setSpin(0, 5) -- Add spin for dynamic motion
+
+	-- Left paddle - Glow sparks (larger, cyan to neon orange, fast, short-lived)
+	particleLeftGlow = love.graphics.newParticleSystem(particleTexture, 150)
+	particleLeftGlow:setEmissionRate(0)
+	particleLeftGlow:setParticleLifetime(0.2, 0.3) -- Short lifetime
+	particleLeftGlow:setDirection(0) -- Right
+	particleLeftGlow:setSpeed(150, 300) -- Faster speed
+	particleLeftGlow:setSpread(math.pi / 2) -- 90-degree spread
+	particleLeftGlow:setSizes(3, 1.5) -- Start at 24x24 (3 * 8), shrink to 12x12
+	particleLeftGlow:setColors(0, 1, 1, 1, 1, 0.5, 0, 0.5) -- Cyan to neon orange
+	particleLeftGlow:setSpin(0, 6) -- Aggressive spin
+	particleLeftGlow:setLinearAcceleration(0, -100, 0, 100) -- Vertical drift
+
+	-- Right paddle - Fast sparks (larger, neon pink to purple, very fast, short-lived)
+	particleRightFast = love.graphics.newParticleSystem(particleTexture, 300)
+	particleRightFast:setEmissionRate(0)
+	particleRightFast:setParticleLifetime(0.1, 0.2)
+	particleRightFast:setDirection(math.pi) -- Left
+	particleRightFast:setSpeed(300, 500)
+	particleRightFast:setSpread(math.pi / 2)
+	particleRightFast:setSizes(2, 0)
+	particleRightFast:setColors(1, 0, 1, 1, 0.5, 0, 1, 0)
+	particleRightFast:setLinearAcceleration(0, -150, 0, 150)
+	particleRightFast:setSpin(0, 5)
+
+	-- Right paddle - Glow sparks (larger, cyan to neon orange, fast, short-lived)
+	particleRightGlow = love.graphics.newParticleSystem(particleTexture, 150)
+	particleRightGlow:setEmissionRate(0)
+	particleRightGlow:setParticleLifetime(0.2, 0.3)
+	particleRightGlow:setDirection(math.pi) -- Left
+	particleRightGlow:setSpeed(150, 300)
+	particleRightGlow:setSpread(math.pi / 2)
+	particleRightGlow:setSizes(3, 1.5)
+	particleRightGlow:setColors(0, 1, 1, 1, 1, 0.5, 0, 0.5)
+	particleRightGlow:setSpin(0, 6)
+	particleRightGlow:setLinearAcceleration(0, -100, 0, 100)
 end
 
 -- Reset ball to center and start serve delay
@@ -108,6 +164,12 @@ function love.update(dt)
 		paddleLeft.y = paddleLeft.y + paddleLeft.speed * dt
 	end
 	paddleLeft.y = math.max(0, math.min(600 - paddleLeft.height, paddleLeft.y))
+
+	-- Update particle systems
+	particleLeftFast:update(dt)
+	particleLeftGlow:update(dt)
+	particleRightFast:update(dt)
+	particleRightGlow:update(dt)
 
 	if serveDelay.active then
 		serveDelay.timer = serveDelay.timer + dt
@@ -175,6 +237,11 @@ function love.update(dt)
 		ball.speedX = math.cos(bounce_angle) * new_speed
 		ball.speedY = math.sin(bounce_angle) * new_speed
 		love.audio.play(soundPaddle)
+		-- Emit particles at the point of contact
+		particleLeftFast:setPosition(paddleLeft.x + paddleLeft.width, ball.y)
+		particleLeftFast:emit(40) -- Increased to 40 fast sparks
+		particleLeftGlow:setPosition(paddleLeft.x + paddleLeft.width, ball.y)
+		particleLeftGlow:emit(3) -- Increased to 20 glow sparks
 	end
 
 	if
@@ -194,6 +261,11 @@ function love.update(dt)
 		ball.speedX = -math.cos(bounce_angle) * new_speed
 		ball.speedY = math.sin(bounce_angle) * new_speed
 		love.audio.play(soundPaddle)
+		-- Emit particles at the point of contact
+		particleRightFast:setPosition(paddleRight.x, ball.y)
+		particleRightFast:emit(40) -- Increased to 40 fast sparks
+		particleRightGlow:setPosition(paddleRight.x, ball.y)
+		particleRightGlow:emit(3) -- Increased to 20 glow sparks
 	end
 end
 
@@ -222,6 +294,13 @@ function love.draw()
 	love.graphics.rectangle("fill", paddleLeft.x, paddleLeft.y, paddleLeft.width, paddleLeft.height)
 	love.graphics.setColor(paddleRight.color)
 	love.graphics.rectangle("fill", paddleRight.x, paddleRight.y, paddleRight.width, paddleRight.height)
+
+	-- Draw particles
+	love.graphics.setColor(1, 1, 1, 1) -- Reset to white to avoid tinting
+	love.graphics.draw(particleLeftFast)
+	love.graphics.draw(particleLeftGlow)
+	love.graphics.draw(particleRightFast)
+	love.graphics.draw(particleRightGlow)
 
 	-- Draw scores with shadow effect
 	love.graphics.setFont(scoreFont)
