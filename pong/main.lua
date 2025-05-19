@@ -13,11 +13,18 @@ function love.load()
 		radius = 10,
 		speedX = 0,
 		speedY = 0,
-		color = { 1, 1, 1 },
+		color = { 1, 1, 1 }, -- Current display color (starts white)
+		targetColor = { 1, 1, 1 }, -- Target color based on speed (starts white)
+		colorLerpTimer = 0, -- Timer for color interpolation
+		colorLerpDuration = 0.5, -- Duration of color transition in seconds
+		glowRadius = 0, -- Current glow radius (starts at 0)
+		targetGlowRadius = 0, -- Target glow radius based on speed (starts at 0)
+		glowIntensity = 0, -- Current glow intensity (starts at 0)
+		targetGlowIntensity = 0, -- Target glow intensity based on speed (starts at 0)
 		lastHitPaddle = nil,
-		lastSpeedX = 0, -- Track previous velocity for bounce detection
+		lastSpeedX = 0,
 		lastSpeedY = 0,
-		wasStationary = true, -- Track if the ball was stationary last frame
+		wasStationary = true,
 	}
 
 	-- Left paddle (player)
@@ -47,21 +54,21 @@ function love.load()
 
 	-- Screen shake state
 	shake = {
-		intensity = 0, -- Current shake intensity (pixels)
-		maxIntensity = 5, -- Max shake intensity when triggered
-		duration = 0.2, -- Duration of shake in seconds
-		timer = 0, -- Current time elapsed during shake
+		intensity = 0,
+		maxIntensity = 5,
+		duration = 0.2,
+		timer = 0,
 	}
 
 	-- Ball trail state (polyline-based)
-	ballTrailPoints = {} -- List of {x, y, time} points
-	ballTrailLifetime = 1 -- Trail lifetime in seconds
-	ballTrailWidthStart = 8 -- Starting width (near the ball)
-	ballTrailWidthEnd = 6 -- Ending width (at the tail)
+	ballTrailPoints = {}
+	ballTrailLifetime = 1
+	ballTrailWidthStart = 8
+	ballTrailWidthEnd = 6
 
 	-- Load custom font
-	scoreFont = love.graphics.newFont("assets/myfont.ttf", 36) -- Custom font for scores
-	winFont = love.graphics.newFont("assets/myfont.ttf", 48) -- Custom font for win message
+	scoreFont = love.graphics.newFont("assets/myfont.ttf", 36)
+	winFont = love.graphics.newFont("assets/myfont.ttf", 48)
 
 	-- Load sound effects and music
 	soundPaddle = love.audio.newSource("sounds/paddle_hit.wav", "static")
@@ -80,35 +87,35 @@ function love.load()
 	love.graphics.setCanvas()
 	particleTexture = canvas
 
-	-- Left paddle - Fast sparks (larger, neon pink to purple, very fast, short-lived)
+	-- Left paddle - Fast sparks
 	particleLeftFast = love.graphics.newParticleSystem(particleTexture, 300)
 	particleLeftFast:setEmissionRate(0)
-	particleLeftFast:setParticleLifetime(0.1, 0.2) -- Very short lifetime
-	particleLeftFast:setDirection(0) -- Right
-	particleLeftFast:setSpeed(300, 500) -- Much faster speed
-	particleLeftFast:setSpread(math.pi / 2) -- 90-degree spread
-	particleLeftFast:setSizes(2, 0) -- Start at 16x16 (2 * 8), shrink to 0
-	particleLeftFast:setColors(1, 0, 1, 1, 0.5, 0, 1, 0) -- Neon pink to purple
-	particleLeftFast:setLinearAcceleration(0, -150, 0, 150) -- Stronger vertical drift
-	particleLeftFast:setSpin(0, 5) -- Add spin for dynamic motion
+	particleLeftFast:setParticleLifetime(0.1, 0.2)
+	particleLeftFast:setDirection(0)
+	particleLeftFast:setSpeed(300, 500)
+	particleLeftFast:setSpread(math.pi / 2)
+	particleLeftFast:setSizes(2, 0)
+	particleLeftFast:setColors(1, 0, 1, 1, 0.5, 0, 1, 0)
+	particleLeftFast:setLinearAcceleration(0, -150, 0, 150)
+	particleLeftFast:setSpin(0, 5)
 
-	-- Left paddle - Glow sparks (larger, cyan to neon orange, fast, short-lived)
+	-- Left paddle - Glow sparks
 	particleLeftGlow = love.graphics.newParticleSystem(particleTexture, 150)
 	particleLeftGlow:setEmissionRate(0)
-	particleLeftGlow:setParticleLifetime(0.2, 0.3) -- Short lifetime
-	particleLeftGlow:setDirection(0) -- Right
-	particleLeftGlow:setSpeed(150, 300) -- Faster speed
-	particleLeftGlow:setSpread(math.pi / 2) -- 90-degree spread
-	particleLeftGlow:setSizes(3, 1.5) -- Start at 24x24 (3 * 8), shrink to 12x12
-	particleLeftGlow:setColors(0, 1, 1, 1, 1, 0.5, 0, 0.5) -- Cyan to neon orange
-	particleLeftGlow:setSpin(0, 6) -- Aggressive spin
-	particleLeftGlow:setLinearAcceleration(0, -100, 0, 100) -- Vertical drift
+	particleLeftGlow:setParticleLifetime(0.2, 0.3)
+	particleLeftGlow:setDirection(0)
+	particleLeftGlow:setSpeed(150, 300)
+	particleLeftGlow:setSpread(math.pi / 2)
+	particleLeftGlow:setSizes(3, 1.5)
+	particleLeftGlow:setColors(0, 1, 1, 1, 1, 0.5, 0, 0.5)
+	particleLeftGlow:setSpin(0, 6)
+	particleLeftGlow:setLinearAcceleration(0, -100, 0, 100)
 
-	-- Right paddle - Fast sparks (larger, neon pink to purple, very fast, short-lived)
+	-- Right paddle - Fast sparks
 	particleRightFast = love.graphics.newParticleSystem(particleTexture, 300)
 	particleRightFast:setEmissionRate(0)
 	particleRightFast:setParticleLifetime(0.1, 0.2)
-	particleRightFast:setDirection(math.pi) -- Left
+	particleRightFast:setDirection(math.pi)
 	particleRightFast:setSpeed(300, 500)
 	particleRightFast:setSpread(math.pi / 2)
 	particleRightFast:setSizes(2, 0)
@@ -116,11 +123,11 @@ function love.load()
 	particleRightFast:setLinearAcceleration(0, -150, 0, 150)
 	particleRightFast:setSpin(0, 5)
 
-	-- Right paddle - Glow sparks (larger, cyan to neon orange, fast, short-lived)
+	-- Right paddle - Glow sparks
 	particleRightGlow = love.graphics.newParticleSystem(particleTexture, 150)
 	particleRightGlow:setEmissionRate(0)
 	particleRightGlow:setParticleLifetime(0.2, 0.3)
-	particleRightGlow:setDirection(math.pi) -- Left
+	particleRightGlow:setDirection(math.pi)
 	particleRightGlow:setSpeed(150, 300)
 	particleRightGlow:setSpread(math.pi / 2)
 	particleRightGlow:setSizes(3, 1.5)
@@ -138,7 +145,14 @@ function resetBall()
 	serveDelay.active = true
 	serveDelay.timer = 0
 	ball.lastHitPaddle = nil
-	-- Do not clear ballTrailPoints; let the existing trail fade out naturally
+	-- Reset color and glow
+	ball.color = { 1, 1, 1 }
+	ball.targetColor = { 1, 1, 1 }
+	ball.colorLerpTimer = 0
+	ball.glowRadius = 0
+	ball.targetGlowRadius = 0
+	ball.glowIntensity = 0
+	ball.targetGlowIntensity = 0
 end
 
 -- Reset the entire game state
@@ -193,27 +207,51 @@ function love.update(dt)
 
 	-- Update ball trail (polyline-based)
 	local speedMagnitude = math.sqrt(ball.speedX ^ 2 + ball.speedY ^ 2)
-	-- Add current position to trail if the ball is moving
 	if speedMagnitude > 0 then
 		table.insert(ballTrailPoints, 1, { x = ball.x, y = ball.y, time = love.timer.getTime() })
 	end
-	-- Remove points older than the lifetime
 	local currentTime = love.timer.getTime()
 	while #ballTrailPoints > 0 and (currentTime - ballTrailPoints[#ballTrailPoints].time) > ballTrailLifetime do
 		table.remove(ballTrailPoints, #ballTrailPoints)
 	end
 
-	-- Check if the ball started moving (from stationary to moving)
 	if speedMagnitude > 0 and ball.wasStationary then
-		-- Clear the trail to prevent particles from appearing before the start
 		ballTrailPoints = { { x = ball.x, y = ball.y, time = love.timer.getTime() } }
 	end
 	ball.wasStationary = (speedMagnitude == 0)
 
-	-- Update screen shake
+	-- Update ball color and glow based on speed
+	local minSpeed = 200
+	local maxSpeed = 500
+	local t = math.min(math.max((speedMagnitude - minSpeed) / (maxSpeed - minSpeed), 0), 1)
+	-- Target color: white (1, 1, 1) to glowing yellow (1, 0.9, 0) to match the streamer
+	local targetR = 1
+	local targetG = 1 - (0.1 * t) -- 1 to 0.9
+	local targetB = 1 - t -- 1 to 0
+	ball.targetColor = { targetR, targetG, targetB }
+	-- Target glow: radius from 0 to 15, intensity from 0 to 0.5
+	ball.targetGlowRadius = 0 + (15 * t)
+	ball.targetGlowIntensity = 0 + (0.5 * t)
+
+	-- Interpolate color, glow radius, and intensity
+	if ball.colorLerpTimer < ball.colorLerpDuration then
+		ball.colorLerpTimer = ball.colorLerpTimer + dt
+		local lerpT = math.min(ball.colorLerpTimer / ball.colorLerpDuration, 1)
+		-- Interpolate color
+		ball.color[1] = ball.color[1] + (targetR - ball.color[1]) * lerpT
+		ball.color[2] = ball.color[2] + (targetG - ball.color[2]) * lerpT
+		ball.color[3] = ball.color[3] + (targetB - ball.color[3]) * lerpT
+		-- Interpolate glow radius and intensity
+		ball.glowRadius = ball.glowRadius + (ball.targetGlowRadius - ball.glowRadius) * lerpT
+		ball.glowIntensity = ball.glowIntensity + (ball.targetGlowIntensity - ball.glowIntensity) * lerpT
+	else
+		ball.color = { targetR, targetG, targetB }
+		ball.glowRadius = ball.targetGlowRadius
+		ball.glowIntensity = ball.targetGlowIntensity
+	end
+
 	if shake.timer > 0 then
 		shake.timer = shake.timer - dt
-		-- Linearly decay intensity over the duration
 		shake.intensity = shake.maxIntensity * (shake.timer / shake.duration)
 		if shake.timer <= 0 then
 			shake.intensity = 0
@@ -286,14 +324,13 @@ function love.update(dt)
 		ball.speedX = math.cos(bounce_angle) * new_speed
 		ball.speedY = math.sin(bounce_angle) * new_speed
 		love.audio.play(soundPaddle)
-		-- Emit particles at the point of contact
 		particleLeftFast:setPosition(paddleLeft.x + paddleLeft.width, ball.y)
-		particleLeftFast:emit(40) -- 40 fast sparks
+		particleLeftFast:emit(40)
 		particleLeftGlow:setPosition(paddleLeft.x + paddleLeft.width, ball.y)
-		particleLeftGlow:emit(3) -- 3 glow sparks
-		-- Trigger screen shake
+		particleLeftGlow:emit(3)
 		shake.timer = shake.duration
 		shake.intensity = shake.maxIntensity
+		ball.colorLerpTimer = 0
 	end
 
 	if
@@ -313,17 +350,15 @@ function love.update(dt)
 		ball.speedX = -math.cos(bounce_angle) * new_speed
 		ball.speedY = math.sin(bounce_angle) * new_speed
 		love.audio.play(soundPaddle)
-		-- Emit particles at the point of contact
 		particleRightFast:setPosition(paddleRight.x, ball.y)
-		particleRightFast:emit(40) -- 40 fast sparks
+		particleRightFast:emit(40)
 		particleRightGlow:setPosition(paddleRight.x, ball.y)
-		particleRightGlow:emit(3) -- 3 glow sparks
-		-- Trigger screen shake
+		particleRightGlow:emit(3)
 		shake.timer = shake.duration
 		shake.intensity = shake.maxIntensity
+		ball.colorLerpTimer = 0
 	end
 
-	-- Update previous velocity (no longer needed for direction change detection but kept for potential future use)
 	ball.lastSpeedX = ball.speedX
 	ball.lastSpeedY = ball.speedY
 end
@@ -337,87 +372,102 @@ end
 
 -- Draw the court
 function love.draw()
-	-- Apply screen shake by translating the entire scene
 	local offsetX, offsetY = 0, 0
 	if shake.intensity > 0 then
-		-- Random offset within the current intensity
 		offsetX = love.math.random(-shake.intensity, shake.intensity)
 		offsetY = love.math.random(-shake.intensity, shake.intensity)
 	end
 	love.graphics.push()
 	love.graphics.translate(offsetX, offsetY)
 
-	-- Draw background image, scaled to fill height and cropped horizontally
 	love.graphics.setBackgroundColor(0, 0, 0)
 	local scale = 600 / 1024
 	local scaledWidth = 1536 * scale
 	local bgOffsetX = -(scaledWidth - 800) / 2
 	love.graphics.draw(backgroundImage, bgOffsetX, 0, 0, scale, scale)
 
-	-- Draw ball trail (polyline-based)
 	if #ballTrailPoints > 1 then
 		local currentTime = love.timer.getTime()
 		for i = 1, #ballTrailPoints - 1 do
 			local p1 = ballTrailPoints[i]
 			local p2 = ballTrailPoints[i + 1]
-			-- Calculate the age of the segment (use the older point's time)
 			local age = currentTime - p2.time
 			if age <= ballTrailLifetime then
-				-- Calculate fade factor (0 at tail, 1 at head)
 				local fade = 1 - (age / ballTrailLifetime)
-				-- Interpolate width
 				local width = ballTrailWidthStart + (ballTrailWidthEnd - ballTrailWidthStart) * (1 - fade)
-				-- Set color to glowing yellow with fading alpha
-				local r, g, b, a = 1, 0.9, 0, fade -- Glowing yellow (1, 0.9, 0) fading to transparent
+				local r, g, b, a = 1, 0.9, 0, fade
 				love.graphics.setColor(r, g, b, a)
-				-- Calculate direction and length of the segment
 				local dx = p2.x - p1.x
 				local dy = p2.y - p1.y
 				local length = math.sqrt(dx * dx + dy * dy)
 				if length > 0 then
-					-- Normalize direction
 					dx = dx / length
 					dy = dy / length
-					-- Calculate perpendicular vector for width
 					local px = -dy * width / 2
 					local py = dx * width / 2
-					-- Define the four corners of the rectangle
 					local x1, y1 = p1.x + px, p1.y + py
 					local x2, y2 = p1.x - px, p1.y - py
 					local x3, y3 = p2.x - px, p2.y - py
 					local x4, y4 = p2.x + px, p2.y + py
-					-- Draw the segment as a filled polygon
 					love.graphics.polygon("fill", x1, y1, x2, y2, x3, y3, x4, y4)
 				end
 			end
 		end
 	end
 
-	-- Draw game elements
-	love.graphics.setColor(paddleLeft.color)
-	love.graphics.rectangle("fill", paddleLeft.x, paddleLeft.y, paddleLeft.width, paddleLeft.height)
-	love.graphics.setColor(paddleRight.color)
-	love.graphics.rectangle("fill", paddleRight.x, paddleRight.y, paddleRight.width, paddleRight.height)
+	-- Draw the glow effect around the ball
+	-- Draw the glow effect around the ball with radial gradient
+	if not serveDelay.active or math.floor(serveDelay.timer / serveDelay.flashInterval) % 2 == 0 then
+		if ball.glowRadius > 0 and ball.glowIntensity > 0 then
+			-- Set additive blend mode for a brighter, natural glow
+			love.graphics.setBlendMode("add", "alphamultiply")
+
+			-- Calculate the maximum radius of the glow
+			local maxRadius = ball.radius + ball.glowRadius
+
+			-- Draw concentric circle outlines
+			for r = ball.radius, maxRadius, 1 do
+				local distance = r - ball.radius
+				local t = distance / ball.glowRadius
+				-- Quadratic falloff for smooth fading
+				local alpha = ball.glowIntensity * (1 - t) * (1 - t)
+				love.graphics.setColor(ball.color[1], ball.color[2], ball.color[3], alpha)
+				love.graphics.circle("line", ball.x, ball.y, r)
+			end
+
+			-- Reset blend mode to default for other drawings
+			love.graphics.setBlendMode("alpha")
+		end
+	end
+
+	-- Draw the ball on top of the glow
 	love.graphics.setColor(ball.color)
 	if not serveDelay.active or math.floor(serveDelay.timer / serveDelay.flashInterval) % 2 == 0 then
 		love.graphics.circle("fill", ball.x, ball.y, ball.radius)
 	end
 
-	-- Draw paddle impact particles (on top of paddles and ball)
+	-- Draw the ball on top of the glow
+	love.graphics.setColor(ball.color)
+	if not serveDelay.active or math.floor(serveDelay.timer / serveDelay.flashInterval) % 2 == 0 then
+		love.graphics.circle("fill", ball.x, ball.y, ball.radius)
+	end
+
+	love.graphics.setColor(paddleLeft.color)
+	love.graphics.rectangle("fill", paddleLeft.x, paddleLeft.y, paddleLeft.width, paddleLeft.height)
+	love.graphics.setColor(paddleRight.color)
+	love.graphics.rectangle("fill", paddleRight.x, paddleRight.y, paddleRight.width, paddleRight.height)
+
 	love.graphics.setColor(1, 1, 1, 1)
 	love.graphics.draw(particleLeftFast)
 	love.graphics.draw(particleLeftGlow)
 	love.graphics.draw(particleRightFast)
 	love.graphics.draw(particleRightGlow)
 
-	-- Draw scores with shadow effect
 	love.graphics.setFont(scoreFont)
-	-- Player score with shadow
 	love.graphics.setColor(0, 0, 0)
 	love.graphics.print("Player: " .. score.player, 80 + 2, 40 + 2)
 	love.graphics.setColor(1, 1, 1)
 	love.graphics.print("Player: " .. score.player, 80, 40)
-	-- CPU score with shadow
 	local cpuScoreText = "CPU: " .. score.cpu
 	local textWidth = scoreFont:getWidth(cpuScoreText)
 	local cpuScoreX = 720 - textWidth
@@ -426,7 +476,6 @@ function love.draw()
 	love.graphics.setColor(1, 1, 1)
 	love.graphics.print(cpuScoreText, cpuScoreX, 40)
 
-	-- Draw win message
 	if not gameState.playing then
 		love.graphics.setFont(winFont)
 		local message = gameState.winner == "player" and "Player Wins!" or "CPU Wins!"
@@ -435,6 +484,5 @@ function love.draw()
 		love.graphics.print("Press R to Restart", 300, 350)
 	end
 
-	-- End the translation
 	love.graphics.pop()
 end
