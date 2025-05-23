@@ -1,5 +1,6 @@
 -- main.lua
 local scenes = {
+	menu = require("menuScene"),
 	game = require("gameScene"),
 }
 local currentScene = nil
@@ -36,7 +37,7 @@ function updateViewport()
 	if windowAspect > ASPECT_RATIO then
 		-- Window is wider than 4:3, use height to determine scale (pillarbox)
 		viewport.scale = windowHeight / VIRTUAL_HEIGHT
-		viewport.width = VIRTUAL_WIDTH * viewport.scale -- Screen coordinates
+		viewport.width = VIRTUAL_WIDTH * viewport.scale
 		viewport.height = windowHeight
 		viewport.x = (windowWidth - viewport.width) / 2
 		viewport.y = 0
@@ -44,7 +45,7 @@ function updateViewport()
 		-- Window is taller than 4:3, use width to determine scale (letterbox)
 		viewport.scale = windowWidth / VIRTUAL_WIDTH
 		viewport.width = windowWidth
-		viewport.height = VIRTUAL_HEIGHT * viewport.scale -- Screen coordinates
+		viewport.height = VIRTUAL_HEIGHT * viewport.scale
 		viewport.x = 0
 		viewport.y = (windowHeight - viewport.height) / 2
 	end
@@ -57,8 +58,8 @@ function love.load()
 	love.graphics.setBackgroundColor(0, 0, 0)
 	updateViewport()
 
-	-- Register scenes
-	switchScene("game")
+	-- Start with the menu scene
+	switchScene("menu")
 end
 
 function love.resize(w, h)
@@ -96,11 +97,9 @@ function love.draw()
 	-- Draw black bars for letterboxing/pillarboxing after the scene
 	love.graphics.setColor(0, 0, 0)
 	if viewport.x > 0 then
-		-- Pillarbox (black bars on sides)
 		love.graphics.rectangle("fill", -viewport.x / viewport.scale, 0, viewport.x / viewport.scale, VIRTUAL_HEIGHT)
 		love.graphics.rectangle("fill", VIRTUAL_WIDTH, 0, viewport.x / viewport.scale, VIRTUAL_HEIGHT)
 	elseif viewport.y > 0 then
-		-- Letterbox (black bars on top/bottom)
 		love.graphics.rectangle("fill", 0, -viewport.y / viewport.scale, VIRTUAL_WIDTH, viewport.y / viewport.scale)
 		love.graphics.rectangle("fill", 0, VIRTUAL_HEIGHT, VIRTUAL_WIDTH, viewport.y / viewport.scale)
 	end
