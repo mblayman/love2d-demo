@@ -1,9 +1,8 @@
 local GameScene = {}
 
-function GameScene:load()
-	-- Set up the game window and initial objects
-	love.window.setTitle("Pong Clone")
-	love.window.setMode(800, 600)
+function GameScene:load(viewport)
+	-- Store viewport for scaling fonts and particles
+	self.viewport = viewport
 
 	-- Load background image
 	self.backgroundImage = love.graphics.newImage("assets/background.png")
@@ -15,14 +14,14 @@ function GameScene:load()
 		radius = 10,
 		speedX = 0,
 		speedY = 0,
-		color = { 1, 1, 1 }, -- Current display color (starts white)
-		targetColor = { 1, 1, 1 }, -- Target color based on speed (starts white)
-		colorLerpTimer = 0, -- Timer for color interpolation
-		colorLerpDuration = 0.5, -- Duration of color transition in seconds
-		glowRadius = 0, -- Current glow radius (starts at 0)
-		targetGlowRadius = 0, -- Target glow radius based on speed (starts at 0)
-		glowIntensity = 0, -- Current glow intensity (starts at 0)
-		targetGlowIntensity = 0, -- Target glow intensity based on speed (starts at 0)
+		color = { 1, 1, 1 },
+		targetColor = { 1, 1, 1 },
+		colorLerpTimer = 0,
+		colorLerpDuration = 0.5,
+		glowRadius = 0,
+		targetGlowRadius = 0,
+		glowIntensity = 0,
+		targetGlowIntensity = 0,
 		lastHitPaddle = nil,
 		lastSpeedX = 0,
 		lastSpeedY = 0,
@@ -68,9 +67,11 @@ function GameScene:load()
 	self.ballTrailWidthStart = 8
 	self.ballTrailWidthEnd = 6
 
-	-- Load custom font
-	self.scoreFont = love.graphics.newFont("assets/myfont.ttf", 36)
-	self.winFont = love.graphics.newFont("assets/myfont.ttf", 48)
+	-- Load custom font (scale based on viewport)
+	local baseFontSize = 36
+	local scale = viewport.scale or 1
+	self.scoreFont = love.graphics.newFont("assets/myfont.ttf", math.floor(baseFontSize * scale))
+	self.winFont = love.graphics.newFont("assets/myfont.ttf", math.floor(baseFontSize * 4 / 3 * scale))
 
 	-- Load sound effects and music
 	self.soundPaddle = love.audio.newSource("sounds/paddle_hit.wav", "static")
@@ -94,11 +95,11 @@ function GameScene:load()
 	self.particleLeftFast:setEmissionRate(0)
 	self.particleLeftFast:setParticleLifetime(0.1, 0.2)
 	self.particleLeftFast:setDirection(0)
-	self.particleLeftFast:setSpeed(300, 500)
+	self.particleLeftFast:setSpeed(300 * scale, 500 * scale)
 	self.particleLeftFast:setSpread(math.pi / 2)
-	self.particleLeftFast:setSizes(2, 0)
+	self.particleLeftFast:setSizes(2 * scale, 0)
 	self.particleLeftFast:setColors(1, 0, 1, 1, 0.5, 0, 1, 0)
-	self.particleLeftFast:setLinearAcceleration(0, -150, 0, 150)
+	self.particleLeftFast:setLinearAcceleration(0, -150 * scale, 0, 150 * scale)
 	self.particleLeftFast:setSpin(0, 5)
 
 	-- Left paddle - Glow sparks
@@ -106,23 +107,23 @@ function GameScene:load()
 	self.particleLeftGlow:setEmissionRate(0)
 	self.particleLeftGlow:setParticleLifetime(0.2, 0.3)
 	self.particleLeftGlow:setDirection(0)
-	self.particleLeftGlow:setSpeed(150, 300)
+	self.particleLeftGlow:setSpeed(150 * scale, 300 * scale)
 	self.particleLeftGlow:setSpread(math.pi / 2)
-	self.particleLeftGlow:setSizes(3, 1.5)
+	self.particleLeftGlow:setSizes(3 * scale, 1.5 * scale)
 	self.particleLeftGlow:setColors(0, 1, 1, 1, 1, 0.5, 0, 0.5)
 	self.particleLeftGlow:setSpin(0, 6)
-	self.particleLeftGlow:setLinearAcceleration(0, -100, 0, 100)
+	self.particleLeftGlow:setLinearAcceleration(0, -100 * scale, 0, 100 * scale)
 
 	-- Right paddle - Fast sparks
 	self.particleRightFast = love.graphics.newParticleSystem(self.particleTexture, 300)
 	self.particleRightFast:setEmissionRate(0)
 	self.particleRightFast:setParticleLifetime(0.1, 0.2)
 	self.particleRightFast:setDirection(math.pi)
-	self.particleRightFast:setSpeed(300, 500)
+	self.particleRightFast:setSpeed(300 * scale, 500 * scale)
 	self.particleRightFast:setSpread(math.pi / 2)
-	self.particleRightFast:setSizes(2, 0)
+	self.particleRightFast:setSizes(2 * scale, 0)
 	self.particleRightFast:setColors(1, 0, 1, 1, 0.5, 0, 1, 0)
-	self.particleRightFast:setLinearAcceleration(0, -150, 0, 150)
+	self.particleRightFast:setLinearAcceleration(0, -150 * scale, 0, 150 * scale)
 	self.particleRightFast:setSpin(0, 5)
 
 	-- Right paddle - Glow sparks
@@ -130,12 +131,12 @@ function GameScene:load()
 	self.particleRightGlow:setEmissionRate(0)
 	self.particleRightGlow:setParticleLifetime(0.2, 0.3)
 	self.particleRightGlow:setDirection(math.pi)
-	self.particleRightGlow:setSpeed(150, 300)
+	self.particleRightGlow:setSpeed(150 * scale, 300 * scale)
 	self.particleRightGlow:setSpread(math.pi / 2)
-	self.particleRightGlow:setSizes(3, 1.5)
+	self.particleRightGlow:setSizes(3 * scale, 1.5 * scale)
 	self.particleRightGlow:setColors(0, 1, 1, 1, 1, 0.5, 0, 0.5)
 	self.particleRightGlow:setSpin(0, 6)
-	self.particleRightGlow:setLinearAcceleration(0, -100, 0, 100)
+	self.particleRightGlow:setLinearAcceleration(0, -100 * scale, 0, 100 * scale)
 end
 
 function GameScene:resetBall()
@@ -146,7 +147,6 @@ function GameScene:resetBall()
 	self.serveDelay.active = true
 	self.serveDelay.timer = 0
 	self.ball.lastHitPaddle = nil
-	-- Reset color and glow
 	self.ball.color = { 1, 1, 1 }
 	self.ball.targetColor = { 1, 1, 1 }
 	self.ball.colorLerpTimer = 0
@@ -197,13 +197,11 @@ function GameScene:update(dt)
 	end
 	self.paddleLeft.y = math.max(0, math.min(600 - self.paddleLeft.height, self.paddleLeft.y))
 
-	-- Update paddle particle systems
 	self.particleLeftFast:update(dt)
 	self.particleLeftGlow:update(dt)
 	self.particleRightFast:update(dt)
 	self.particleRightGlow:update(dt)
 
-	-- Update ball trail (polyline-based)
 	local speedMagnitude = math.sqrt(self.ball.speedX ^ 2 + self.ball.speedY ^ 2)
 	if speedMagnitude > 0 then
 		table.insert(self.ballTrailPoints, 1, { x = self.ball.x, y = self.ball.y, time = love.timer.getTime() })
@@ -221,28 +219,22 @@ function GameScene:update(dt)
 	end
 	self.ball.wasStationary = (speedMagnitude == 0)
 
-	-- Update ball color and glow based on speed
 	local minSpeed = 200
 	local maxSpeed = 500
 	local t = math.min(math.max((speedMagnitude - minSpeed) / (maxSpeed - minSpeed), 0), 1)
-	-- Target color: white (1, 1, 1) to glowing yellow (1, 0.9, 0)
 	local targetR = 1
-	local targetG = 1 - (0.1 * t) -- 1 to 0.9
-	local targetB = 1 - t -- 1 to 0
+	local targetG = 1 - (0.1 * t)
+	local targetB = 1 - t
 	self.ball.targetColor = { targetR, targetG, targetB }
-	-- Target glow: radius from 0 to 15, intensity from 0 to 0.5
 	self.ball.targetGlowRadius = 0 + (15 * t)
 	self.ball.targetGlowIntensity = 0 + (0.5 * t)
 
-	-- Interpolate color, glow radius, and intensity
 	if self.ball.colorLerpTimer < self.ball.colorLerpDuration then
 		self.ball.colorLerpTimer = self.ball.colorLerpTimer + dt
 		local lerpT = math.min(self.ball.colorLerpTimer / self.ball.colorLerpDuration, 1)
-		-- Interpolate color
 		self.ball.color[1] = self.ball.color[1] + (targetR - self.ball.color[1]) * lerpT
 		self.ball.color[2] = self.ball.color[2] + (targetG - self.ball.color[2]) * lerpT
 		self.ball.color[3] = self.ball.color[3] + (targetB - self.ball.color[3]) * lerpT
-		-- Interpolate glow radius and intensity
 		self.ball.glowRadius = self.ball.glowRadius + (self.ball.targetGlowRadius - self.ball.glowRadius) * lerpT
 		self.ball.glowIntensity = self.ball.glowIntensity
 			+ (self.ball.targetGlowIntensity - self.ball.glowIntensity) * lerpT
@@ -380,10 +372,13 @@ function GameScene:draw()
 	love.graphics.push()
 	love.graphics.translate(offsetX, offsetY)
 
-	love.graphics.setBackgroundColor(0, 0, 0)
-	local scale = 600 / 1024
-	local scaledWidth = 1536 * scale
+	-- Draw background image
+	local bgHeight = 1024 -- Background image height
+	local scale = 600 / bgHeight
+	local bgWidth = 1536 -- Background image width
+	local scaledWidth = bgWidth * scale
 	local bgOffsetX = -(scaledWidth - 800) / 2
+	love.graphics.setColor(1, 1, 1)
 	love.graphics.draw(self.backgroundImage, bgOffsetX, 0, 0, scale, scale)
 
 	if #self.ballTrailPoints > 1 then
@@ -416,31 +411,21 @@ function GameScene:draw()
 		end
 	end
 
-	-- Draw the glow effect around the ball
 	if not self.serveDelay.active or math.floor(self.serveDelay.timer / self.serveDelay.flashInterval) % 2 == 0 then
 		if self.ball.glowRadius > 0 and self.ball.glowIntensity > 0 then
-			-- Set additive blend mode for a brighter, natural glow
 			love.graphics.setBlendMode("add", "alphamultiply")
-
-			-- Calculate the maximum radius of the glow
 			local maxRadius = self.ball.radius + self.ball.glowRadius
-
-			-- Draw concentric circle outlines
 			for r = self.ball.radius, maxRadius, 1 do
 				local distance = r - self.ball.radius
 				local t = distance / self.ball.glowRadius
-				-- Quadratic falloff for smooth fading
 				local alpha = self.ball.glowIntensity * (1 - t) * (1 - t)
 				love.graphics.setColor(self.ball.color[1], self.ball.color[2], self.ball.color[3], alpha)
 				love.graphics.circle("line", self.ball.x, self.ball.y, r)
 			end
-
-			-- Reset blend mode to default for other drawings
 			love.graphics.setBlendMode("alpha")
 		end
 	end
 
-	-- Draw the ball on top of the glow
 	love.graphics.setColor(self.ball.color)
 	if not self.serveDelay.active or math.floor(self.serveDelay.timer / self.serveDelay.flashInterval) % 2 == 0 then
 		love.graphics.circle("fill", self.ball.x, self.ball.y, self.ball.radius)
