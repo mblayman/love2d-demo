@@ -1,13 +1,30 @@
--- Set up the game window and initial objects
-function love.load()
+-- Scene manager
+local scenes = {}
+local currentScene = nil
+
+-- Switch to a new scene
+function switchScene(sceneName)
+	if scenes[sceneName] then
+		currentScene = scenes[sceneName]
+		if currentScene.load then
+			currentScene:load()
+		end
+	end
+end
+
+-- GameScene definition
+local GameScene = {}
+
+function GameScene:load()
+	-- Set up the game window and initial objects
 	love.window.setTitle("Pong Clone")
 	love.window.setMode(800, 600)
 
 	-- Load background image
-	backgroundImage = love.graphics.newImage("assets/background.png")
+	self.backgroundImage = love.graphics.newImage("assets/background.png")
 
 	-- Ball properties
-	ball = {
+	self.ball = {
 		x = 400,
 		y = 300,
 		radius = 10,
@@ -28,7 +45,7 @@ function love.load()
 	}
 
 	-- Left paddle (player)
-	paddleLeft = {
+	self.paddleLeft = {
 		x = 50,
 		y = 250,
 		width = 20,
@@ -38,7 +55,7 @@ function love.load()
 	}
 
 	-- Right paddle (CPU)
-	paddleRight = {
+	self.paddleRight = {
 		x = 730,
 		y = 250,
 		width = 20,
@@ -48,12 +65,12 @@ function love.load()
 	}
 
 	-- Score and game state
-	score = { player = 0, cpu = 0 }
-	gameState = { playing = true, winner = nil, maxScore = 7 }
-	serveDelay = { active = true, timer = 0, duration = 1.5, flashInterval = 0.25 }
+	self.score = { player = 0, cpu = 0 }
+	self.gameState = { playing = true, winner = nil, maxScore = 7 }
+	self.serveDelay = { active = true, timer = 0, duration = 1.5, flashInterval = 0.25 }
 
 	-- Screen shake state
-	shake = {
+	self.shake = {
 		intensity = 0,
 		maxIntensity = 5,
 		duration = 0.2,
@@ -61,23 +78,23 @@ function love.load()
 	}
 
 	-- Ball trail state (polyline-based)
-	ballTrailPoints = {}
-	ballTrailLifetime = 1
-	ballTrailWidthStart = 8
-	ballTrailWidthEnd = 6
+	self.ballTrailPoints = {}
+	self.ballTrailLifetime = 1
+	self.ballTrailWidthStart = 8
+	self.ballTrailWidthEnd = 6
 
 	-- Load custom font
-	scoreFont = love.graphics.newFont("assets/myfont.ttf", 36)
-	winFont = love.graphics.newFont("assets/myfont.ttf", 48)
+	self.scoreFont = love.graphics.newFont("assets/myfont.ttf", 36)
+	self.winFont = love.graphics.newFont("assets/myfont.ttf", 48)
 
 	-- Load sound effects and music
-	soundPaddle = love.audio.newSource("sounds/paddle_hit.wav", "static")
-	soundWall = love.audio.newSource("sounds/wall_bounce.wav", "static")
-	soundScore = love.audio.newSource("sounds/score.wav", "static")
-	backgroundMusic = love.audio.newSource("sounds/background.mp3", "stream")
-	backgroundMusic:setLooping(true)
-	backgroundMusic:setVolume(0.5)
-	backgroundMusic:play()
+	self.soundPaddle = love.audio.newSource("sounds/paddle_hit.wav", "static")
+	self.soundWall = love.audio.newSource("sounds/wall_bounce.wav", "static")
+	self.soundScore = love.audio.newSource("sounds/score.wav", "static")
+	self.backgroundMusic = love.audio.newSource("sounds/background.mp3", "stream")
+	self.backgroundMusic:setLooping(true)
+	self.backgroundMusic:setVolume(0.5)
+	self.backgroundMusic:play()
 
 	-- Create particle texture for paddle sparks (8x8 white square as base)
 	local canvas = love.graphics.newCanvas(8, 8)
@@ -85,297 +102,298 @@ function love.load()
 	love.graphics.setColor(1, 1, 1, 1)
 	love.graphics.rectangle("fill", 0, 0, 8, 8)
 	love.graphics.setCanvas()
-	particleTexture = canvas
+	self.particleTexture = canvas
 
 	-- Left paddle - Fast sparks
-	particleLeftFast = love.graphics.newParticleSystem(particleTexture, 300)
-	particleLeftFast:setEmissionRate(0)
-	particleLeftFast:setParticleLifetime(0.1, 0.2)
-	particleLeftFast:setDirection(0)
-	particleLeftFast:setSpeed(300, 500)
-	particleLeftFast:setSpread(math.pi / 2)
-	particleLeftFast:setSizes(2, 0)
-	particleLeftFast:setColors(1, 0, 1, 1, 0.5, 0, 1, 0)
-	particleLeftFast:setLinearAcceleration(0, -150, 0, 150)
-	particleLeftFast:setSpin(0, 5)
+	self.particleLeftFast = love.graphics.newParticleSystem(self.particleTexture, 300)
+	self.particleLeftFast:setEmissionRate(0)
+	self.particleLeftFast:setParticleLifetime(0.1, 0.2)
+	self.particleLeftFast:setDirection(0)
+	self.particleLeftFast:setSpeed(300, 500)
+	self.particleLeftFast:setSpread(math.pi / 2)
+	self.particleLeftFast:setSizes(2, 0)
+	self.particleLeftFast:setColors(1, 0, 1, 1, 0.5, 0, 1, 0)
+	self.particleLeftFast:setLinearAcceleration(0, -150, 0, 150)
+	self.particleLeftFast:setSpin(0, 5)
 
 	-- Left paddle - Glow sparks
-	particleLeftGlow = love.graphics.newParticleSystem(particleTexture, 150)
-	particleLeftGlow:setEmissionRate(0)
-	particleLeftGlow:setParticleLifetime(0.2, 0.3)
-	particleLeftGlow:setDirection(0)
-	particleLeftGlow:setSpeed(150, 300)
-	particleLeftGlow:setSpread(math.pi / 2)
-	particleLeftGlow:setSizes(3, 1.5)
-	particleLeftGlow:setColors(0, 1, 1, 1, 1, 0.5, 0, 0.5)
-	particleLeftGlow:setSpin(0, 6)
-	particleLeftGlow:setLinearAcceleration(0, -100, 0, 100)
+	self.particleLeftGlow = love.graphics.newParticleSystem(self.particleTexture, 150)
+	self.particleLeftGlow:setEmissionRate(0)
+	self.particleLeftGlow:setParticleLifetime(0.2, 0.3)
+	self.particleLeftGlow:setDirection(0)
+	self.particleLeftGlow:setSpeed(150, 300)
+	self.particleLeftGlow:setSpread(math.pi / 2)
+	self.particleLeftGlow:setSizes(3, 1.5)
+	self.particleLeftGlow:setColors(0, 1, 1, 1, 1, 0.5, 0, 0.5)
+	self.particleLeftGlow:setSpin(0, 6)
+	self.particleLeftGlow:setLinearAcceleration(0, -100, 0, 100)
 
 	-- Right paddle - Fast sparks
-	particleRightFast = love.graphics.newParticleSystem(particleTexture, 300)
-	particleRightFast:setEmissionRate(0)
-	particleRightFast:setParticleLifetime(0.1, 0.2)
-	particleRightFast:setDirection(math.pi)
-	particleRightFast:setSpeed(300, 500)
-	particleRightFast:setSpread(math.pi / 2)
-	particleRightFast:setSizes(2, 0)
-	particleRightFast:setColors(1, 0, 1, 1, 0.5, 0, 1, 0)
-	particleRightFast:setLinearAcceleration(0, -150, 0, 150)
-	particleRightFast:setSpin(0, 5)
+	self.particleRightFast = love.graphics.newParticleSystem(self.particleTexture, 300)
+	self.particleRightFast:setEmissionRate(0)
+	self.particleRightFast:setParticleLifetime(0.1, 0.2)
+	self.particleRightFast:setDirection(math.pi)
+	self.particleRightFast:setSpeed(300, 500)
+	self.particleRightFast:setSpread(math.pi / 2)
+	self.particleRightFast:setSizes(2, 0)
+	self.particleRightFast:setColors(1, 0, 1, 1, 0.5, 0, 1, 0)
+	self.particleRightFast:setLinearAcceleration(0, -150, 0, 150)
+	self.particleRightFast:setSpin(0, 5)
 
 	-- Right paddle - Glow sparks
-	particleRightGlow = love.graphics.newParticleSystem(particleTexture, 150)
-	particleRightGlow:setEmissionRate(0)
-	particleRightGlow:setParticleLifetime(0.2, 0.3)
-	particleRightGlow:setDirection(math.pi)
-	particleRightGlow:setSpeed(150, 300)
-	particleRightGlow:setSpread(math.pi / 2)
-	particleRightGlow:setSizes(3, 1.5)
-	particleRightGlow:setColors(0, 1, 1, 1, 1, 0.5, 0, 0.5)
-	particleRightGlow:setSpin(0, 6)
-	particleRightGlow:setLinearAcceleration(0, -100, 0, 100)
+	self.particleRightGlow = love.graphics.newParticleSystem(self.particleTexture, 150)
+	self.particleRightGlow:setEmissionRate(0)
+	self.particleRightGlow:setParticleLifetime(0.2, 0.3)
+	self.particleRightGlow:setDirection(math.pi)
+	self.particleRightGlow:setSpeed(150, 300)
+	self.particleRightGlow:setSpread(math.pi / 2)
+	self.particleRightGlow:setSizes(3, 1.5)
+	self.particleRightGlow:setColors(0, 1, 1, 1, 1, 0.5, 0, 0.5)
+	self.particleRightGlow:setSpin(0, 6)
+	self.particleRightGlow:setLinearAcceleration(0, -100, 0, 100)
 end
 
 -- Reset ball to center and start serve delay
-function resetBall()
-	ball.x, ball.y = 400, 300
-	ball.speedX, ball.speedY = 0, 0
-	ball.lastSpeedX, ball.lastSpeedY = 0, 0
-	ball.wasStationary = true
-	serveDelay.active = true
-	serveDelay.timer = 0
-	ball.lastHitPaddle = nil
+function GameScene:resetBall()
+	self.ball.x, self.ball.y = 400, 300
+	self.ball.speedX, self.ball.speedY = 0, 0
+	self.ball.lastSpeedX, self.ball.lastSpeedY = 0, 0
+	self.ball.wasStationary = true
+	self.serveDelay.active = true
+	self.serveDelay.timer = 0
+	self.ball.lastHitPaddle = nil
 	-- Reset color and glow
-	ball.color = { 1, 1, 1 }
-	ball.targetColor = { 1, 1, 1 }
-	ball.colorLerpTimer = 0
-	ball.glowRadius = 0
-	ball.targetGlowRadius = 0
-	ball.glowIntensity = 0
-	ball.targetGlowIntensity = 0
+	self.ball.color = { 1, 1, 1 }
+	self.ball.targetColor = { 1, 1, 1 }
+	self.ball.colorLerpTimer = 0
+	self.ball.glowRadius = 0
+	self.ball.targetGlowRadius = 0
+	self.ball.glowIntensity = 0
+	self.ball.targetGlowIntensity = 0
 end
 
 -- Reset the entire game state
-function resetGame()
-	score.player = 0
-	score.cpu = 0
-	paddleLeft.y = 250
-	paddleRight.y = 250
-	resetBall()
-	gameState.playing = true
-	gameState.winner = nil
-	if not backgroundMusic:isPlaying() then
-		backgroundMusic:play()
+function GameScene:resetGame()
+	self.score.player = 0
+	self.score.cpu = 0
+	self.paddleLeft.y = 250
+	self.paddleRight.y = 250
+	self:resetBall()
+	self.gameState.playing = true
+	self.gameState.winner = nil
+	if not self.backgroundMusic:isPlaying() then
+		self.backgroundMusic:play()
 	end
 end
 
 -- Start the ball with random direction
-function startBall()
+function GameScene:startBall()
 	local speed = 200
 	local angle = love.math.random() * math.pi / 3 + math.pi / 9
 	if love.math.random() < 0.5 then
 		angle = angle + math.pi
 	end
-	ball.speedX = math.cos(angle) * speed
-	ball.speedY = math.sin(angle) * speed
-	serveDelay.active = false
+	self.ball.speedX = math.cos(angle) * speed
+	self.ball.speedY = math.sin(angle) * speed
+	self.serveDelay.active = false
 end
 
--- Update game state
-function love.update(dt)
-	if not gameState.playing then
-		if backgroundMusic:isPlaying() then
-			backgroundMusic:pause()
+function GameScene:update(dt)
+	if not self.gameState.playing then
+		if self.backgroundMusic:isPlaying() then
+			self.backgroundMusic:pause()
 		end
 		return
 	end
 
-	ball.lastHitPaddle = nil
+	self.ball.lastHitPaddle = nil
 
 	if love.keyboard.isDown("up") then
-		paddleLeft.y = paddleLeft.y - paddleLeft.speed * dt
+		self.paddleLeft.y = self.paddleLeft.y - self.paddleLeft.speed * dt
 	elseif love.keyboard.isDown("down") then
-		paddleLeft.y = paddleLeft.y + paddleLeft.speed * dt
+		self.paddleLeft.y = self.paddleLeft.y + self.paddleLeft.speed * dt
 	end
-	paddleLeft.y = math.max(0, math.min(600 - paddleLeft.height, paddleLeft.y))
+	self.paddleLeft.y = math.max(0, math.min(600 - self.paddleLeft.height, self.paddleLeft.y))
 
 	-- Update paddle particle systems
-	particleLeftFast:update(dt)
-	particleLeftGlow:update(dt)
-	particleRightFast:update(dt)
-	particleRightGlow:update(dt)
+	self.particleLeftFast:update(dt)
+	self.particleLeftGlow:update(dt)
+	self.particleRightFast:update(dt)
+	self.particleRightGlow:update(dt)
 
 	-- Update ball trail (polyline-based)
-	local speedMagnitude = math.sqrt(ball.speedX ^ 2 + ball.speedY ^ 2)
+	local speedMagnitude = math.sqrt(self.ball.speedX ^ 2 + self.ball.speedY ^ 2)
 	if speedMagnitude > 0 then
-		table.insert(ballTrailPoints, 1, { x = ball.x, y = ball.y, time = love.timer.getTime() })
+		table.insert(self.ballTrailPoints, 1, { x = self.ball.x, y = self.ball.y, time = love.timer.getTime() })
 	end
 	local currentTime = love.timer.getTime()
-	while #ballTrailPoints > 0 and (currentTime - ballTrailPoints[#ballTrailPoints].time) > ballTrailLifetime do
-		table.remove(ballTrailPoints, #ballTrailPoints)
+	while
+		#self.ballTrailPoints > 0
+		and (currentTime - self.ballTrailPoints[#self.ballTrailPoints].time) > self.ballTrailLifetime
+	do
+		table.remove(self.ballTrailPoints, #self.ballTrailPoints)
 	end
 
-	if speedMagnitude > 0 and ball.wasStationary then
-		ballTrailPoints = { { x = ball.x, y = ball.y, time = love.timer.getTime() } }
+	if speedMagnitude > 0 and self.ball.wasStationary then
+		self.ballTrailPoints = { { x = self.ball.x, y = self.ball.y, time = love.timer.getTime() } }
 	end
-	ball.wasStationary = (speedMagnitude == 0)
+	self.ball.wasStationary = (speedMagnitude == 0)
 
 	-- Update ball color and glow based on speed
 	local minSpeed = 200
 	local maxSpeed = 500
 	local t = math.min(math.max((speedMagnitude - minSpeed) / (maxSpeed - minSpeed), 0), 1)
-	-- Target color: white (1, 1, 1) to glowing yellow (1, 0.9, 0) to match the streamer
+	-- Target color: white (1, 1, 1) to glowing yellow (1, 0.9, 0)
 	local targetR = 1
 	local targetG = 1 - (0.1 * t) -- 1 to 0.9
 	local targetB = 1 - t -- 1 to 0
-	ball.targetColor = { targetR, targetG, targetB }
+	self.ball.targetColor = { targetR, targetG, targetB }
 	-- Target glow: radius from 0 to 15, intensity from 0 to 0.5
-	ball.targetGlowRadius = 0 + (15 * t)
-	ball.targetGlowIntensity = 0 + (0.5 * t)
+	self.ball.targetGlowRadius = 0 + (15 * t)
+	self.ball.targetGlowIntensity = 0 + (0.5 * t)
 
 	-- Interpolate color, glow radius, and intensity
-	if ball.colorLerpTimer < ball.colorLerpDuration then
-		ball.colorLerpTimer = ball.colorLerpTimer + dt
-		local lerpT = math.min(ball.colorLerpTimer / ball.colorLerpDuration, 1)
+	if self.ball.colorLerpTimer < self.ball.colorLerpDuration then
+		self.ball.colorLerpTimer = self.ball.colorLerpTimer + dt
+		local lerpT = math.min(self.ball.colorLerpTimer / self.ball.colorLerpDuration, 1)
 		-- Interpolate color
-		ball.color[1] = ball.color[1] + (targetR - ball.color[1]) * lerpT
-		ball.color[2] = ball.color[2] + (targetG - ball.color[2]) * lerpT
-		ball.color[3] = ball.color[3] + (targetB - ball.color[3]) * lerpT
+		self.ball.color[1] = self.ball.color[1] + (targetR - self.ball.color[1]) * lerpT
+		self.ball.color[2] = self.ball.color[2] + (targetG - self.ball.color[2]) * lerpT
+		self.ball.color[3] = self.ball.color[3] + (targetB - self.ball.color[3]) * lerpT
 		-- Interpolate glow radius and intensity
-		ball.glowRadius = ball.glowRadius + (ball.targetGlowRadius - ball.glowRadius) * lerpT
-		ball.glowIntensity = ball.glowIntensity + (ball.targetGlowIntensity - ball.glowIntensity) * lerpT
+		self.ball.glowRadius = self.ball.glowRadius + (self.ball.targetGlowRadius - self.ball.glowRadius) * lerpT
+		self.ball.glowIntensity = self.ball.glowIntensity
+			+ (self.ball.targetGlowIntensity - self.ball.glowIntensity) * lerpT
 	else
-		ball.color = { targetR, targetG, targetB }
-		ball.glowRadius = ball.targetGlowRadius
-		ball.glowIntensity = ball.targetGlowIntensity
+		self.ball.color = { targetR, targetG, targetB }
+		self.ball.glowRadius = self.ball.targetGlowRadius
+		self.ball.glowIntensity = self.ball.targetGlowIntensity
 	end
 
-	if shake.timer > 0 then
-		shake.timer = shake.timer - dt
-		shake.intensity = shake.maxIntensity * (shake.timer / shake.duration)
-		if shake.timer <= 0 then
-			shake.intensity = 0
+	if self.shake.timer > 0 then
+		self.shake.timer = self.shake.timer - dt
+		self.shake.intensity = self.shake.maxIntensity * (self.shake.timer / self.shake.duration)
+		if self.shake.timer <= 0 then
+			self.shake.intensity = 0
 		end
 	end
 
-	if serveDelay.active then
-		serveDelay.timer = serveDelay.timer + dt
-		if serveDelay.timer >= serveDelay.duration then
-			startBall()
+	if self.serveDelay.active then
+		self.serveDelay.timer = self.serveDelay.timer + dt
+		if self.serveDelay.timer >= self.serveDelay.duration then
+			self:startBall()
 		end
 		return
 	end
 
-	local targetY = ball.y - paddleRight.height / 2
-	if paddleRight.y + paddleRight.height / 2 < targetY then
-		paddleRight.y = paddleRight.y + paddleRight.speed * dt
-	elseif paddleRight.y + paddleRight.height / 2 > targetY then
-		paddleRight.y = paddleRight.y - paddleRight.speed * dt
+	local targetY = self.ball.y - self.paddleRight.height / 2
+	if self.paddleRight.y + self.paddleRight.height / 2 < targetY then
+		self.paddleRight.y = self.paddleRight.y + self.paddleRight.speed * dt
+	elseif self.paddleRight.y + self.paddleRight.height / 2 > targetY then
+		self.paddleRight.y = self.paddleRight.y - self.paddleRight.speed * dt
 	end
-	paddleRight.y = math.max(0, math.min(600 - paddleRight.height, paddleRight.y))
+	self.paddleRight.y = math.max(0, math.min(600 - self.paddleRight.height, self.paddleRight.y))
 
-	ball.x = ball.x + ball.speedX * dt
-	ball.y = ball.y + ball.speedY * dt
+	self.ball.x = self.ball.x + self.ball.speedX * dt
+	self.ball.y = self.ball.y + self.ball.speedY * dt
 
-	if ball.y - ball.radius < 0 then
-		ball.y = ball.radius
-		ball.speedY = -ball.speedY
-		love.audio.play(soundWall)
-	elseif ball.y + ball.radius > 600 then
-		ball.y = 600 - ball.radius
-		ball.speedY = -ball.speedY
-		love.audio.play(soundWall)
+	if self.ball.y - self.ball.radius < 0 then
+		self.ball.y = self.ball.radius
+		self.ball.speedY = -self.ball.speedY
+		love.audio.play(self.soundWall)
+	elseif self.ball.y + self.ball.radius > 600 then
+		self.ball.y = 600 - self.ball.radius
+		self.ball.speedY = -self.ball.speedY
+		love.audio.play(self.soundWall)
 	end
 
-	if ball.x < 0 then
-		score.cpu = score.cpu + 1
-		love.audio.play(soundScore)
-		if score.cpu >= gameState.maxScore then
-			gameState.playing = false
-			gameState.winner = "cpu"
+	if self.ball.x < 0 then
+		self.score.cpu = self.score.cpu + 1
+		love.audio.play(self.soundScore)
+		if self.score.cpu >= self.gameState.maxScore then
+			self.gameState.playing = false
+			self.gameState.winner = "cpu"
 		else
-			resetBall()
+			self:resetBall()
 		end
-	elseif ball.x > 800 then
-		score.player = score.player + 1
-		love.audio.play(soundScore)
-		if score.player >= gameState.maxScore then
-			gameState.playing = false
-			gameState.winner = "player"
+	elseif self.ball.x > 800 then
+		self.score.player = self.score.player + 1
+		love.audio.play(self.soundScore)
+		if self.score.player >= self.gameState.maxScore then
+			self.gameState.playing = false
+			self.gameState.winner = "player"
 		else
-			resetBall()
+			self:resetBall()
 		end
 	end
 
 	if
-		ball.lastHitPaddle == nil
-		and ball.x - ball.radius <= paddleLeft.x + paddleLeft.width
-		and ball.x + ball.radius >= paddleLeft.x
-		and ball.y >= paddleLeft.y
-		and ball.y <= paddleLeft.y + paddleLeft.height
+		self.ball.lastHitPaddle == nil
+		and self.ball.x - self.ball.radius <= self.paddleLeft.x + self.paddleLeft.width
+		and self.ball.x + self.ball.radius >= self.paddleLeft.x
+		and self.ball.y >= self.paddleLeft.y
+		and self.ball.y <= self.paddleLeft.y + self.paddleLeft.height
 	then
-		ball.lastHitPaddle = "left"
-		ball.x = paddleLeft.x + paddleLeft.width + ball.radius + 5
-		local hitPos = (ball.y - paddleLeft.y) / paddleLeft.height
+		self.ball.lastHitPaddle = "left"
+		self.ball.x = self.paddleLeft.x + self.paddleLeft.width + self.ball.radius + 5
+		local hitPos = (self.ball.y - self.paddleLeft.y) / self.paddleLeft.height
 		local max_angle = math.pi / 4
 		local bounce_angle = (hitPos - 0.5) * 2 * max_angle
-		local current_speed = math.sqrt(ball.speedX ^ 2 + ball.speedY ^ 2)
+		local current_speed = math.sqrt(self.ball.speedX ^ 2 + self.ball.speedY ^ 2)
 		local new_speed = current_speed * 1.15
-		ball.speedX = math.cos(bounce_angle) * new_speed
-		ball.speedY = math.sin(bounce_angle) * new_speed
-		love.audio.play(soundPaddle)
-		particleLeftFast:setPosition(paddleLeft.x + paddleLeft.width, ball.y)
-		particleLeftFast:emit(40)
-		particleLeftGlow:setPosition(paddleLeft.x + paddleLeft.width, ball.y)
-		particleLeftGlow:emit(3)
-		shake.timer = shake.duration
-		shake.intensity = shake.maxIntensity
-		ball.colorLerpTimer = 0
+		self.ball.speedX = math.cos(bounce_angle) * new_speed
+		self.ball.speedY = math.sin(bounce_angle) * new_speed
+		love.audio.play(self.soundPaddle)
+		self.particleLeftFast:setPosition(self.paddleLeft.x + self.paddleLeft.width, self.ball.y)
+		self.particleLeftFast:emit(40)
+		self.particleLeftGlow:setPosition(self.paddleLeft.x + self.paddleLeft.width, self.ball.y)
+		self.particleLeftGlow:emit(3)
+		self.shake.timer = self.shake.duration
+		self.shake.intensity = self.shake.maxIntensity
+		self.ball.colorLerpTimer = 0
 	end
 
 	if
-		ball.lastHitPaddle == nil
-		and ball.x + ball.radius >= paddleRight.x
-		and ball.x - ball.radius <= paddleRight.x + paddleRight.width
-		and ball.y >= paddleRight.y
-		and ball.y <= paddleRight.y + paddleRight.height
+		self.ball.lastHitPaddle == nil
+		and self.ball.x + self.ball.radius >= self.paddleRight.x
+		and self.ball.x - self.ball.radius <= self.paddleRight.x + self.paddleRight.width
+		and self.ball.y >= self.paddleRight.y
+		and self.ball.y <= self.paddleRight.y + self.paddleRight.height
 	then
-		ball.lastHitPaddle = "right"
-		ball.x = paddleRight.x - ball.radius - 5
-		local hitPos = (ball.y - paddleRight.y) / paddleRight.height
+		self.ball.lastHitPaddle = "right"
+		self.ball.x = self.paddleRight.x - self.ball.radius - 5
+		local hitPos = (self.ball.y - self.paddleRight.y) / self.paddleRight.height
 		local max_angle = math.pi / 4
 		local bounce_angle = (hitPos - 0.5) * 2 * max_angle
-		local current_speed = math.sqrt(ball.speedX ^ 2 + ball.speedY ^ 2)
+		local current_speed = math.sqrt(self.ball.speedX ^ 2 + self.ball.speedY ^ 2)
 		local new_speed = current_speed * 1.15
-		ball.speedX = -math.cos(bounce_angle) * new_speed
-		ball.speedY = math.sin(bounce_angle) * new_speed
-		love.audio.play(soundPaddle)
-		particleRightFast:setPosition(paddleRight.x, ball.y)
-		particleRightFast:emit(40)
-		particleRightGlow:setPosition(paddleRight.x, ball.y)
-		particleRightGlow:emit(3)
-		shake.timer = shake.duration
-		shake.intensity = shake.maxIntensity
-		ball.colorLerpTimer = 0
+		self.ball.speedX = -math.cos(bounce_angle) * new_speed
+		self.ball.speedY = math.sin(bounce_angle) * new_speed
+		love.audio.play(self.soundPaddle)
+		self.particleRightFast:setPosition(self.paddleRight.x, self.ball.y)
+		self.particleRightFast:emit(40)
+		self.particleRightGlow:setPosition(self.paddleRight.x, self.ball.y)
+		self.particleRightGlow:emit(3)
+		self.shake.timer = self.shake.duration
+		self.shake.intensity = self.shake.maxIntensity
+		self.ball.colorLerpTimer = 0
 	end
 
-	ball.lastSpeedX = ball.speedX
-	ball.lastSpeedY = ball.speedY
+	self.ball.lastSpeedX = self.ball.speedX
+	self.ball.lastSpeedY = self.ball.speedY
 end
 
--- Handle key presses for game restart
-function love.keypressed(key)
-	if not gameState.playing and key == "r" then
-		resetGame()
+function GameScene:keypressed(key)
+	if not self.gameState.playing and key == "r" then
+		self:resetGame()
 	end
 end
 
--- Draw the court
-function love.draw()
+function GameScene:draw()
 	local offsetX, offsetY = 0, 0
-	if shake.intensity > 0 then
-		offsetX = love.math.random(-shake.intensity, shake.intensity)
-		offsetY = love.math.random(-shake.intensity, shake.intensity)
+	if self.shake.intensity > 0 then
+		offsetX = love.math.random(-self.shake.intensity, self.shake.intensity)
+		offsetY = love.math.random(-self.shake.intensity, self.shake.intensity)
 	end
 	love.graphics.push()
 	love.graphics.translate(offsetX, offsetY)
@@ -384,17 +402,18 @@ function love.draw()
 	local scale = 600 / 1024
 	local scaledWidth = 1536 * scale
 	local bgOffsetX = -(scaledWidth - 800) / 2
-	love.graphics.draw(backgroundImage, bgOffsetX, 0, 0, scale, scale)
+	love.graphics.draw(self.backgroundImage, bgOffsetX, 0, 0, scale, scale)
 
-	if #ballTrailPoints > 1 then
+	if #self.ballTrailPoints > 1 then
 		local currentTime = love.timer.getTime()
-		for i = 1, #ballTrailPoints - 1 do
-			local p1 = ballTrailPoints[i]
-			local p2 = ballTrailPoints[i + 1]
+		for i = 1, #self.ballTrailPoints - 1 do
+			local p1 = self.ballTrailPoints[i]
+			local p2 = self.ballTrailPoints[i + 1]
 			local age = currentTime - p2.time
-			if age <= ballTrailLifetime then
-				local fade = 1 - (age / ballTrailLifetime)
-				local width = ballTrailWidthStart + (ballTrailWidthEnd - ballTrailWidthStart) * (1 - fade)
+			if age <= self.ballTrailLifetime then
+				local fade = 1 - (age / self.ballTrailLifetime)
+				local width = self.ballTrailWidthStart
+					+ (self.ballTrailWidthEnd - self.ballTrailWidthStart) * (1 - fade)
 				local r, g, b, a = 1, 0.9, 0, fade
 				love.graphics.setColor(r, g, b, a)
 				local dx = p2.x - p1.x
@@ -416,23 +435,22 @@ function love.draw()
 	end
 
 	-- Draw the glow effect around the ball
-	-- Draw the glow effect around the ball with radial gradient
-	if not serveDelay.active or math.floor(serveDelay.timer / serveDelay.flashInterval) % 2 == 0 then
-		if ball.glowRadius > 0 and ball.glowIntensity > 0 then
+	if not self.serveDelay.active or math.floor(self.serveDelay.timer / self.serveDelay.flashInterval) % 2 == 0 then
+		if self.ball.glowRadius > 0 and self.ball.glowIntensity > 0 then
 			-- Set additive blend mode for a brighter, natural glow
 			love.graphics.setBlendMode("add", "alphamultiply")
 
 			-- Calculate the maximum radius of the glow
-			local maxRadius = ball.radius + ball.glowRadius
+			local maxRadius = self.ball.radius + self.ball.glowRadius
 
 			-- Draw concentric circle outlines
-			for r = ball.radius, maxRadius, 1 do
-				local distance = r - ball.radius
-				local t = distance / ball.glowRadius
+			for r = self.ball.radius, maxRadius, 1 do
+				local distance = r - self.ball.radius
+				local t = distance / self.ball.glowRadius
 				-- Quadratic falloff for smooth fading
-				local alpha = ball.glowIntensity * (1 - t) * (1 - t)
-				love.graphics.setColor(ball.color[1], ball.color[2], ball.color[3], alpha)
-				love.graphics.circle("line", ball.x, ball.y, r)
+				local alpha = self.ball.glowIntensity * (1 - t) * (1 - t)
+				love.graphics.setColor(self.ball.color[1], self.ball.color[2], self.ball.color[3], alpha)
+				love.graphics.circle("line", self.ball.x, self.ball.y, r)
 			end
 
 			-- Reset blend mode to default for other drawings
@@ -441,48 +459,74 @@ function love.draw()
 	end
 
 	-- Draw the ball on top of the glow
-	love.graphics.setColor(ball.color)
-	if not serveDelay.active or math.floor(serveDelay.timer / serveDelay.flashInterval) % 2 == 0 then
-		love.graphics.circle("fill", ball.x, ball.y, ball.radius)
+	love.graphics.setColor(self.ball.color)
+	if not self.serveDelay.active or math.floor(self.serveDelay.timer / self.serveDelay.flashInterval) % 2 == 0 then
+		love.graphics.circle("fill", self.ball.x, self.ball.y, self.ball.radius)
 	end
 
-	-- Draw the ball on top of the glow
-	love.graphics.setColor(ball.color)
-	if not serveDelay.active or math.floor(serveDelay.timer / serveDelay.flashInterval) % 2 == 0 then
-		love.graphics.circle("fill", ball.x, ball.y, ball.radius)
-	end
-
-	love.graphics.setColor(paddleLeft.color)
-	love.graphics.rectangle("fill", paddleLeft.x, paddleLeft.y, paddleLeft.width, paddleLeft.height)
-	love.graphics.setColor(paddleRight.color)
-	love.graphics.rectangle("fill", paddleRight.x, paddleRight.y, paddleRight.width, paddleRight.height)
+	love.graphics.setColor(self.paddleLeft.color)
+	love.graphics.rectangle("fill", self.paddleLeft.x, self.paddleLeft.y, self.paddleLeft.width, self.paddleLeft.height)
+	love.graphics.setColor(self.paddleRight.color)
+	love.graphics.rectangle(
+		"fill",
+		self.paddleRight.x,
+		self.paddleRight.y,
+		self.paddleRight.width,
+		self.paddleRight.height
+	)
 
 	love.graphics.setColor(1, 1, 1, 1)
-	love.graphics.draw(particleLeftFast)
-	love.graphics.draw(particleLeftGlow)
-	love.graphics.draw(particleRightFast)
-	love.graphics.draw(particleRightGlow)
+	love.graphics.draw(self.particleLeftFast)
+	love.graphics.draw(self.particleLeftGlow)
+	love.graphics.draw(self.particleRightFast)
+	love.graphics.draw(self.particleRightGlow)
 
-	love.graphics.setFont(scoreFont)
+	love.graphics.setFont(self.scoreFont)
 	love.graphics.setColor(0, 0, 0)
-	love.graphics.print("Player: " .. score.player, 80 + 2, 40 + 2)
+	love.graphics.print("Player: " .. self.score.player, 80 + 2, 40 + 2)
 	love.graphics.setColor(1, 1, 1)
-	love.graphics.print("Player: " .. score.player, 80, 40)
-	local cpuScoreText = "CPU: " .. score.cpu
-	local textWidth = scoreFont:getWidth(cpuScoreText)
+	love.graphics.print("Player: " .. self.score.player, 80, 40)
+	local cpuScoreText = "CPU: " .. self.score.cpu
+	local textWidth = self.scoreFont:getWidth(cpuScoreText)
 	local cpuScoreX = 720 - textWidth
 	love.graphics.setColor(0, 0, 0)
 	love.graphics.print(cpuScoreText, cpuScoreX + 2, 40 + 2)
 	love.graphics.setColor(1, 1, 1)
 	love.graphics.print(cpuScoreText, cpuScoreX, 40)
 
-	if not gameState.playing then
-		love.graphics.setFont(winFont)
-		local message = gameState.winner == "player" and "Player Wins!" or "CPU Wins!"
+	if not self.gameState.playing then
+		love.graphics.setFont(self.winFont)
+		local message = self.gameState.winner == "player" and "Player Wins!" or "CPU Wins!"
 		love.graphics.print(message, 250, 250)
-		love.graphics.setFont(scoreFont)
+		love.graphics.setFont(self.scoreFont)
 		love.graphics.print("Press R to Restart", 300, 350)
 	end
 
 	love.graphics.pop()
+end
+
+-- LOVE callbacks
+function love.load()
+	-- Register scenes
+	scenes["game"] = GameScene
+	-- Start with the game scene (for now)
+	switchScene("game")
+end
+
+function love.update(dt)
+	if currentScene and currentScene.update then
+		currentScene:update(dt)
+	end
+end
+
+function love.keypressed(key)
+	if currentScene and currentScene.keypressed then
+		currentScene:keypressed(key)
+	end
+end
+
+function love.draw()
+	if currentScene and currentScene.draw then
+		currentScene:draw()
+	end
 end
