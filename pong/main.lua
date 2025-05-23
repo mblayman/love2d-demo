@@ -23,7 +23,7 @@ function switchScene(sceneName)
 	if scenes[sceneName] then
 		currentScene = scenes[sceneName]
 		if currentScene.load then
-			currentScene:load(viewport) -- Pass viewport to scene
+			currentScene:load(viewport)
 		end
 	end
 end
@@ -36,7 +36,7 @@ function updateViewport()
 	if windowAspect > ASPECT_RATIO then
 		-- Window is wider than 4:3, use height to determine scale (pillarbox)
 		viewport.scale = windowHeight / VIRTUAL_HEIGHT
-		viewport.width = VIRTUAL_HEIGHT * ASPECT_RATIO
+		viewport.width = VIRTUAL_WIDTH * viewport.scale -- Screen coordinates
 		viewport.height = windowHeight
 		viewport.x = (windowWidth - viewport.width) / 2
 		viewport.y = 0
@@ -44,7 +44,7 @@ function updateViewport()
 		-- Window is taller than 4:3, use width to determine scale (letterbox)
 		viewport.scale = windowWidth / VIRTUAL_WIDTH
 		viewport.width = windowWidth
-		viewport.height = windowWidth / ASPECT_RATIO
+		viewport.height = VIRTUAL_HEIGHT * viewport.scale -- Screen coordinates
 		viewport.x = 0
 		viewport.y = (windowHeight - viewport.height) / 2
 	end
@@ -54,7 +54,7 @@ function love.load()
 	-- Set up initial window (windowed or fullscreen)
 	love.window.setTitle("Pong Clone")
 	love.window.setMode(VIRTUAL_WIDTH, VIRTUAL_HEIGHT) -- Default windowed size
-	love.graphics.setBackgroundColor(0, 0, 0) -- Set background color once
+	love.graphics.setBackgroundColor(0, 0, 0)
 	updateViewport()
 
 	-- Register scenes
@@ -85,12 +85,10 @@ function love.update(dt)
 end
 
 function love.draw()
-	-- Apply viewport transformation
 	love.graphics.push()
 	love.graphics.translate(viewport.x, viewport.y)
 	love.graphics.scale(viewport.scale, viewport.scale)
 
-	-- Draw the current scene
 	if currentScene and currentScene.draw then
 		currentScene:draw()
 	end
