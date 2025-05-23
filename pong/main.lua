@@ -4,6 +4,7 @@ local scenes = {
 	game = require("gameScene"),
 }
 local currentScene = nil
+local backgroundMusic = nil
 
 -- Virtual resolution for game logic and rendering
 local VIRTUAL_WIDTH = 800
@@ -24,7 +25,7 @@ function switchScene(sceneName)
 	if scenes[sceneName] then
 		currentScene = scenes[sceneName]
 		if currentScene.load then
-			currentScene:load(viewport)
+			currentScene:load(viewport, backgroundMusic)
 		end
 	end
 end
@@ -56,6 +57,13 @@ function love.load()
 	love.window.setTitle("Pong Clone")
 	love.window.setMode(VIRTUAL_WIDTH, VIRTUAL_HEIGHT) -- Default windowed size
 	love.graphics.setBackgroundColor(0, 0, 0)
+
+	-- Load background music
+	backgroundMusic = love.audio.newSource("sounds/background.mp3", "stream")
+	backgroundMusic:setLooping(true)
+	backgroundMusic:setVolume(0.5)
+	backgroundMusic:play()
+
 	updateViewport()
 
 	-- Start with the menu scene

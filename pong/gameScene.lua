@@ -1,8 +1,9 @@
 local GameScene = {}
 
-function GameScene:load(viewport)
-	-- Store viewport for scaling fonts and particles
+function GameScene:load(viewport, backgroundMusic)
+	-- Store viewport and music
 	self.viewport = viewport
+	self.backgroundMusic = backgroundMusic
 
 	-- Load background image
 	self.backgroundImage = love.graphics.newImage("assets/background.png")
@@ -73,14 +74,10 @@ function GameScene:load(viewport)
 	self.scoreFont = love.graphics.newFont("assets/myfont.ttf", math.floor(baseFontSize * scale))
 	self.winFont = love.graphics.newFont("assets/myfont.ttf", math.floor(baseFontSize * 4 / 3 * scale))
 
-	-- Load sound effects and music
+	-- Load sound effects
 	self.soundPaddle = love.audio.newSource("sounds/paddle_hit.wav", "static")
 	self.soundWall = love.audio.newSource("sounds/wall_bounce.wav", "static")
 	self.soundScore = love.audio.newSource("sounds/score.wav", "static")
-	self.backgroundMusic = love.audio.newSource("sounds/background.mp3", "stream")
-	self.backgroundMusic:setLooping(true)
-	self.backgroundMusic:setVolume(0.5)
-	self.backgroundMusic:play()
 
 	-- Create particle texture for paddle sparks (8x8 white square as base)
 	local canvas = love.graphics.newCanvas(8, 8)
@@ -137,6 +134,11 @@ function GameScene:load(viewport)
 	self.particleRightGlow:setColors(0, 1, 1, 1, 1, 0.5, 0, 0.5)
 	self.particleRightGlow:setSpin(0, 6)
 	self.particleRightGlow:setLinearAcceleration(0, -100 * scale, 0, 100 * scale)
+
+	-- Ensure music is playing
+	if not self.backgroundMusic:isPlaying() then
+		self.backgroundMusic:play()
+	end
 end
 
 function GameScene:resetBall()
@@ -186,6 +188,10 @@ function GameScene:update(dt)
 			self.backgroundMusic:pause()
 		end
 		return
+	end
+
+	if not self.backgroundMusic:isPlaying() then
+		self.backgroundMusic:play()
 	end
 
 	self.ball.lastHitPaddle = nil
@@ -373,9 +379,9 @@ function GameScene:draw()
 	love.graphics.translate(offsetX, offsetY)
 
 	-- Draw background image
-	local bgHeight = 1024 -- Background image height
+	local bgHeight = 1024
 	local scale = 600 / bgHeight
-	local bgWidth = 1536 -- Background image width
+	local bgWidth = 1536
 	local scaledWidth = bgWidth * scale
 	local bgOffsetX = -(scaledWidth - 800) / 2
 	love.graphics.setColor(1, 1, 1)

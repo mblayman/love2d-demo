@@ -1,8 +1,9 @@
 local MenuScene = {}
 
-function MenuScene:load(viewport)
-	-- Store viewport for scaling
+function MenuScene:load(viewport, backgroundMusic)
+	-- Store viewport and music
 	self.viewport = viewport
+	self.backgroundMusic = backgroundMusic
 
 	-- Load assets
 	self.backgroundImage = love.graphics.newImage("assets/background.png")
@@ -27,11 +28,10 @@ function MenuScene:load(viewport)
 	}
 	self.selectedIndex = 1 -- Start with first item selected
 
-	-- Load background music (shared with GameScene)
-	self.backgroundMusic = love.audio.newSource("sounds/background.mp3", "stream")
-	self.backgroundMusic:setLooping(true)
-	self.backgroundMusic:setVolume(0.5)
-	self.backgroundMusic:play()
+	-- Ensure music is playing
+	if not self.backgroundMusic:isPlaying() then
+		self.backgroundMusic:play()
+	end
 end
 
 function MenuScene:update(dt)
@@ -50,7 +50,7 @@ function MenuScene:keypressed(key)
 end
 
 function MenuScene:draw()
-	-- Draw background image (same as GameScene)
+	-- Draw background image
 	local bgHeight = 1024
 	local scale = 600 / bgHeight
 	local bgWidth = 1536
@@ -68,7 +68,6 @@ function MenuScene:draw()
 	for i, item in ipairs(self.menuItems) do
 		local y = 300 + (i - 1) * 60
 		if i == self.selectedIndex then
-			-- Highlight selected item
 			love.graphics.setColor(1, 0.9, 0) -- Yellow highlight
 		else
 			love.graphics.setColor(1, 1, 1)
