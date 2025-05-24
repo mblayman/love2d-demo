@@ -72,6 +72,9 @@ end
 
 function love.resize(w, h)
 	updateViewport()
+	if currentScene and currentScene.resize then
+		currentScene:resize(viewport)
+	end
 end
 
 function love.keypressed(key)

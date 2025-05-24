@@ -1,4 +1,11 @@
+-- menuScene.lua
 local MenuScene = {}
+
+-- Helper function to initialize font
+local function initFont(self)
+	local baseFontSize = 36 -- Reduced from 36 to match game scene
+	self.font = love.graphics.newFont("assets/myfont.ttf", math.floor(baseFontSize))
+end
 
 function MenuScene:load(viewport, backgroundMusic)
 	-- Store viewport and music
@@ -7,9 +14,7 @@ function MenuScene:load(viewport, backgroundMusic)
 
 	-- Load assets
 	self.backgroundImage = love.graphics.newImage("assets/background.png")
-	local baseFontSize = 36
-	local scale = viewport.scale or 1
-	self.font = love.graphics.newFont("assets/myfont.ttf", math.floor(baseFontSize * scale))
+	initFont(self)
 
 	-- Menu state
 	self.menuItems = {
@@ -32,6 +37,11 @@ function MenuScene:load(viewport, backgroundMusic)
 	if not self.backgroundMusic:isPlaying() then
 		self.backgroundMusic:play()
 	end
+end
+
+function MenuScene:resize(viewport)
+	self.viewport = viewport
+	initFont(self)
 end
 
 function MenuScene:update(dt)

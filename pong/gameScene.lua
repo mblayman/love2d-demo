@@ -1,4 +1,59 @@
+-- gameScene.lua
 local GameScene = {}
+
+-- Helper function to initialize fonts
+local function initFonts(self)
+	local baseFontSize = 36 -- Reduced from 36 to better fit virtual resolution
+	self.scoreFont = love.graphics.newFont("assets/myfont.ttf", math.floor(baseFontSize))
+	self.winFont = love.graphics.newFont("assets/myfont.ttf", math.floor(baseFontSize * 4 / 3))
+end
+
+-- Helper function to initialize particle systems
+local function initParticles(self)
+	-- Left paddle - Fast sparks
+	self.particleLeftFast:setEmissionRate(0)
+	self.particleLeftFast:setParticleLifetime(0.1, 0.2)
+	self.particleLeftFast:setDirection(0)
+	self.particleLeftFast:setSpeed(300, 500) -- Removed scale multiplier
+	self.particleLeftFast:setSpread(math.pi / 2)
+	self.particleLeftFast:setSizes(2, 0) -- Removed scale multiplier
+	self.particleLeftFast:setColors(1, 0, 1, 1, 0.5, 0, 1, 0)
+	self.particleLeftFast:setLinearAcceleration(0, -150, 0, 150) -- Removed scale multiplier
+	self.particleLeftFast:setSpin(0, 5)
+
+	-- Left paddle - Glow sparks
+	self.particleLeftGlow:setEmissionRate(0)
+	self.particleLeftGlow:setParticleLifetime(0.2, 0.3)
+	self.particleLeftGlow:setDirection(0)
+	self.particleLeftGlow:setSpeed(150, 300) -- Removed scale multiplier
+	self.particleLeftGlow:setSpread(math.pi / 2)
+	self.particleLeftGlow:setSizes(3, 1.5) -- Removed scale multiplier
+	self.particleLeftGlow:setColors(0, 1, 1, 1, 1, 0.5, 0, 0.5)
+	self.particleLeftGlow:setSpin(0, 6)
+	self.particleLeftGlow:setLinearAcceleration(0, -100, 0, 100) -- Removed scale multiplier
+
+	-- Right paddle - Fast sparks
+	self.particleRightFast:setEmissionRate(0)
+	self.particleRightFast:setParticleLifetime(0.1, 0.2)
+	self.particleRightFast:setDirection(math.pi)
+	self.particleRightFast:setSpeed(300, 500) -- Removed scale multiplier
+	self.particleRightFast:setSpread(math.pi / 2)
+	self.particleRightFast:setSizes(2, 0) -- Removed scale multiplier
+	self.particleRightFast:setColors(1, 0, 1, 1, 0.5, 0, 1, 0)
+	self.particleRightFast:setLinearAcceleration(0, -150, 0, 150) -- Removed scale multiplier
+	self.particleRightFast:setSpin(0, 5)
+
+	-- Right paddle - Glow sparks
+	self.particleRightGlow:setEmissionRate(0)
+	self.particleRightGlow:setParticleLifetime(0.2, 0.3)
+	self.particleRightGlow:setDirection(math.pi)
+	self.particleRightGlow:setSpeed(150, 300) -- Removed scale multiplier
+	self.particleRightGlow:setSpread(math.pi / 2)
+	self.particleRightGlow:setSizes(3, 1.5) -- Removed scale multiplier
+	self.particleRightGlow:setColors(0, 1, 1, 1, 1, 0.5, 0, 0.5)
+	self.particleRightGlow:setSpin(0, 6)
+	self.particleRightGlow:setLinearAcceleration(0, -100, 0, 100) -- Removed scale multiplier
+end
 
 function GameScene:load(viewport, backgroundMusic)
 	-- Store viewport and music
@@ -68,12 +123,6 @@ function GameScene:load(viewport, backgroundMusic)
 	self.ballTrailWidthStart = 8
 	self.ballTrailWidthEnd = 6
 
-	-- Load custom font (scale based on viewport)
-	local baseFontSize = 36
-	local scale = viewport.scale or 1
-	self.scoreFont = love.graphics.newFont("assets/myfont.ttf", math.floor(baseFontSize * scale))
-	self.winFont = love.graphics.newFont("assets/myfont.ttf", math.floor(baseFontSize * 4 / 3 * scale))
-
 	-- Load sound effects
 	self.soundPaddle = love.audio.newSource("sounds/paddle_hit.wav", "static")
 	self.soundWall = love.audio.newSource("sounds/wall_bounce.wav", "static")
@@ -87,58 +136,26 @@ function GameScene:load(viewport, backgroundMusic)
 	love.graphics.setCanvas()
 	self.particleTexture = canvas
 
-	-- Left paddle - Fast sparks
+	-- Create particle systems
 	self.particleLeftFast = love.graphics.newParticleSystem(self.particleTexture, 300)
-	self.particleLeftFast:setEmissionRate(0)
-	self.particleLeftFast:setParticleLifetime(0.1, 0.2)
-	self.particleLeftFast:setDirection(0)
-	self.particleLeftFast:setSpeed(300 * scale, 500 * scale)
-	self.particleLeftFast:setSpread(math.pi / 2)
-	self.particleLeftFast:setSizes(2 * scale, 0)
-	self.particleLeftFast:setColors(1, 0, 1, 1, 0.5, 0, 1, 0)
-	self.particleLeftFast:setLinearAcceleration(0, -150 * scale, 0, 150 * scale)
-	self.particleLeftFast:setSpin(0, 5)
-
-	-- Left paddle - Glow sparks
 	self.particleLeftGlow = love.graphics.newParticleSystem(self.particleTexture, 150)
-	self.particleLeftGlow:setEmissionRate(0)
-	self.particleLeftGlow:setParticleLifetime(0.2, 0.3)
-	self.particleLeftGlow:setDirection(0)
-	self.particleLeftGlow:setSpeed(150 * scale, 300 * scale)
-	self.particleLeftGlow:setSpread(math.pi / 2)
-	self.particleLeftGlow:setSizes(3 * scale, 1.5 * scale)
-	self.particleLeftGlow:setColors(0, 1, 1, 1, 1, 0.5, 0, 0.5)
-	self.particleLeftGlow:setSpin(0, 6)
-	self.particleLeftGlow:setLinearAcceleration(0, -100 * scale, 0, 100 * scale)
-
-	-- Right paddle - Fast sparks
 	self.particleRightFast = love.graphics.newParticleSystem(self.particleTexture, 300)
-	self.particleRightFast:setEmissionRate(0)
-	self.particleRightFast:setParticleLifetime(0.1, 0.2)
-	self.particleRightFast:setDirection(math.pi)
-	self.particleRightFast:setSpeed(300 * scale, 500 * scale)
-	self.particleRightFast:setSpread(math.pi / 2)
-	self.particleRightFast:setSizes(2 * scale, 0)
-	self.particleRightFast:setColors(1, 0, 1, 1, 0.5, 0, 1, 0)
-	self.particleRightFast:setLinearAcceleration(0, -150 * scale, 0, 150 * scale)
-	self.particleRightFast:setSpin(0, 5)
-
-	-- Right paddle - Glow sparks
 	self.particleRightGlow = love.graphics.newParticleSystem(self.particleTexture, 150)
-	self.particleRightGlow:setEmissionRate(0)
-	self.particleRightGlow:setParticleLifetime(0.2, 0.3)
-	self.particleRightGlow:setDirection(math.pi)
-	self.particleRightGlow:setSpeed(150 * scale, 300 * scale)
-	self.particleRightGlow:setSpread(math.pi / 2)
-	self.particleRightGlow:setSizes(3 * scale, 1.5 * scale)
-	self.particleRightGlow:setColors(0, 1, 1, 1, 1, 0.5, 0, 0.5)
-	self.particleRightGlow:setSpin(0, 6)
-	self.particleRightGlow:setLinearAcceleration(0, -100 * scale, 0, 100 * scale)
+
+	-- Initialize fonts and particles with fixed sizes
+	initFonts(self)
+	initParticles(self)
 
 	-- Ensure music is playing
 	if not self.backgroundMusic:isPlaying() then
 		self.backgroundMusic:play()
 	end
+end
+
+function GameScene:resize(viewport)
+	self.viewport = viewport
+	initFonts(self)
+	initParticles(self)
 end
 
 function GameScene:resetBall()
