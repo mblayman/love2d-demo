@@ -6,12 +6,10 @@ local scenes = {
 local currentScene = nil
 local backgroundMusic = nil
 
--- Virtual resolution for game logic and rendering
 local VIRTUAL_WIDTH = 800
 local VIRTUAL_HEIGHT = 600
-local ASPECT_RATIO = VIRTUAL_WIDTH / VIRTUAL_HEIGHT -- 4:3 = 1.333
+local ASPECT_RATIO = VIRTUAL_WIDTH / VIRTUAL_HEIGHT
 
--- Viewport for scaling and centering
 local viewport = {
 	x = 0,
 	y = 0,
@@ -20,30 +18,25 @@ local viewport = {
 	scale = 1,
 }
 
--- Switch to a new scene
-function switchScene(sceneName)
+function switchScene(sceneName, difficulty)
 	if scenes[sceneName] then
 		currentScene = scenes[sceneName]
 		if currentScene.load then
-			currentScene:load(viewport, backgroundMusic)
+			currentScene:load(viewport, backgroundMusic, difficulty)
 		end
 	end
 end
 
--- Update viewport based on window size
 function updateViewport()
 	local windowWidth, windowHeight = love.graphics.getDimensions()
 	local windowAspect = windowWidth / windowHeight
-
 	if windowAspect > ASPECT_RATIO then
-		-- Window is wider than 4:3, use height to determine scale (pillarbox)
 		viewport.scale = windowHeight / VIRTUAL_HEIGHT
 		viewport.width = VIRTUAL_WIDTH * viewport.scale
 		viewport.height = windowHeight
 		viewport.x = (windowWidth - viewport.width) / 2
 		viewport.y = 0
 	else
-		-- Window is taller than 4:3, use width to determine scale (letterbox)
 		viewport.scale = windowWidth / VIRTUAL_WIDTH
 		viewport.width = windowWidth
 		viewport.height = VIRTUAL_HEIGHT * viewport.scale
@@ -53,20 +46,14 @@ function updateViewport()
 end
 
 function love.load()
-	-- Set up initial window (windowed or fullscreen)
 	love.window.setTitle("Pong Clone")
-	love.window.setMode(VIRTUAL_WIDTH, VIRTUAL_HEIGHT) -- Default windowed size
+	love.window.setMode(VIRTUAL_WIDTH, VIRTUAL_HEIGHT)
 	love.graphics.setBackgroundColor(0, 0, 0)
-
-	-- Load background music
 	backgroundMusic = love.audio.newSource("sounds/background.mp3", "stream")
 	backgroundMusic:setLooping(true)
 	backgroundMusic:setVolume(0.5)
 	backgroundMusic:play()
-
 	updateViewport()
-
-	-- Start with the menu scene
 	switchScene("menu")
 end
 
@@ -78,13 +65,11 @@ function love.resize(w, h)
 end
 
 function love.keypressed(key)
-	-- Toggle fullscreen with 'f' key
 	if key == "f" then
 		local fullscreen = not love.window.getFullscreen()
 		love.window.setFullscreen(fullscreen)
 		updateViewport()
 	end
-
 	if currentScene and currentScene.keypressed then
 		currentScene:keypressed(key)
 	end
@@ -100,12 +85,9 @@ function love.draw()
 	love.graphics.push()
 	love.graphics.translate(viewport.x, viewport.y)
 	love.graphics.scale(viewport.scale, viewport.scale)
-
 	if currentScene and currentScene.draw then
 		currentScene:draw()
 	end
-
-	-- Draw black bars for letterboxing/pillarboxing after the scene
 	love.graphics.setColor(0, 0, 0)
 	if viewport.x > 0 then
 		love.graphics.rectangle("fill", -viewport.x / viewport.scale, 0, viewport.x / viewport.scale, VIRTUAL_HEIGHT)
@@ -114,6 +96,5 @@ function love.draw()
 		love.graphics.rectangle("fill", 0, -viewport.y / viewport.scale, VIRTUAL_WIDTH, viewport.y / viewport.scale)
 		love.graphics.rectangle("fill", 0, VIRTUAL_HEIGHT, VIRTUAL_WIDTH, viewport.y / viewport.scale)
 	end
-
 	love.graphics.pop()
 end

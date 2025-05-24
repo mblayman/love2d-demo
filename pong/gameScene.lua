@@ -1,67 +1,65 @@
 -- gameScene.lua
 local GameScene = {}
+local Settings = require("settings")
 
 -- Helper function to initialize fonts
 local function initFonts(self)
-	local baseFontSize = 36 -- Reduced from 36 to better fit virtual resolution
+	local baseFontSize = 36
 	self.scoreFont = love.graphics.newFont("assets/myfont.ttf", math.floor(baseFontSize))
 	self.winFont = love.graphics.newFont("assets/myfont.ttf", math.floor(baseFontSize * 4 / 3))
 end
 
 -- Helper function to initialize particle systems
 local function initParticles(self)
-	-- Left paddle - Fast sparks
 	self.particleLeftFast:setEmissionRate(0)
 	self.particleLeftFast:setParticleLifetime(0.1, 0.2)
 	self.particleLeftFast:setDirection(0)
-	self.particleLeftFast:setSpeed(300, 500) -- Removed scale multiplier
+	self.particleLeftFast:setSpeed(300, 500)
 	self.particleLeftFast:setSpread(math.pi / 2)
-	self.particleLeftFast:setSizes(2, 0) -- Removed scale multiplier
+	self.particleLeftFast:setSizes(2, 0)
 	self.particleLeftFast:setColors(1, 0, 1, 1, 0.5, 0, 1, 0)
-	self.particleLeftFast:setLinearAcceleration(0, -150, 0, 150) -- Removed scale multiplier
+	self.particleLeftFast:setLinearAcceleration(0, -150, 0, 150)
 	self.particleLeftFast:setSpin(0, 5)
 
-	-- Left paddle - Glow sparks
 	self.particleLeftGlow:setEmissionRate(0)
 	self.particleLeftGlow:setParticleLifetime(0.2, 0.3)
 	self.particleLeftGlow:setDirection(0)
-	self.particleLeftGlow:setSpeed(150, 300) -- Removed scale multiplier
+	self.particleLeftGlow:setSpeed(150, 300)
 	self.particleLeftGlow:setSpread(math.pi / 2)
-	self.particleLeftGlow:setSizes(3, 1.5) -- Removed scale multiplier
+	self.particleLeftGlow:setSizes(3, 1.5)
 	self.particleLeftGlow:setColors(0, 1, 1, 1, 1, 0.5, 0, 0.5)
 	self.particleLeftGlow:setSpin(0, 6)
-	self.particleLeftGlow:setLinearAcceleration(0, -100, 0, 100) -- Removed scale multiplier
+	self.particleLeftGlow:setLinearAcceleration(0, -100, 0, 100)
 
-	-- Right paddle - Fast sparks
 	self.particleRightFast:setEmissionRate(0)
 	self.particleRightFast:setParticleLifetime(0.1, 0.2)
 	self.particleRightFast:setDirection(math.pi)
-	self.particleRightFast:setSpeed(300, 500) -- Removed scale multiplier
+	self.particleRightFast:setSpeed(300, 500)
 	self.particleRightFast:setSpread(math.pi / 2)
-	self.particleRightFast:setSizes(2, 0) -- Removed scale multiplier
+	self.particleRightFast:setSizes(2, 0)
 	self.particleRightFast:setColors(1, 0, 1, 1, 0.5, 0, 1, 0)
-	self.particleRightFast:setLinearAcceleration(0, -150, 0, 150) -- Removed scale multiplier
+	self.particleRightFast:setLinearAcceleration(0, -150, 0, 150)
 	self.particleRightFast:setSpin(0, 5)
 
-	-- Right paddle - Glow sparks
 	self.particleRightGlow:setEmissionRate(0)
 	self.particleRightGlow:setParticleLifetime(0.2, 0.3)
 	self.particleRightGlow:setDirection(math.pi)
-	self.particleRightGlow:setSpeed(150, 300) -- Removed scale multiplier
+	self.particleRightGlow:setSpeed(150, 300)
 	self.particleRightGlow:setSpread(math.pi / 2)
-	self.particleRightGlow:setSizes(3, 1.5) -- Removed scale multiplier
+	self.particleRightGlow:setSizes(3, 1.5)
 	self.particleRightGlow:setColors(0, 1, 1, 1, 1, 0.5, 0, 0.5)
 	self.particleRightGlow:setSpin(0, 6)
-	self.particleRightGlow:setLinearAcceleration(0, -100, 0, 100) -- Removed scale multiplier
+	self.particleRightGlow:setLinearAcceleration(0, -100, 0, 100)
 end
 
-function GameScene:load(viewport, backgroundMusic)
-	-- Store viewport and music
+function GameScene:load(viewport, backgroundMusic, difficulty)
 	self.viewport = viewport
 	self.backgroundMusic = backgroundMusic
+	self.difficulty = difficulty or "normal" -- Default to normal if not specified
+	self.settings = Settings.difficulties[self.difficulty]
 
-	-- Load background image
-	self.backgroundImage = love.graphics.newImage("assets/background.png")
+	-- Load background image based on difficulty
+	self.backgroundImage = love.graphics.newImage(self.settings.backgroundImagePath)
 
 	-- Ball properties
 	self.ball = {
@@ -90,7 +88,7 @@ function GameScene:load(viewport, backgroundMusic)
 		y = 250,
 		width = 20,
 		height = 100,
-		speed = 300,
+		speed = self.settings.paddleSpeedPlayer,
 		color = { 1, 1, 1 },
 	}
 
@@ -100,13 +98,13 @@ function GameScene:load(viewport, backgroundMusic)
 		y = 250,
 		width = 20,
 		height = 100,
-		speed = 250,
+		speed = self.settings.paddleSpeedCPU,
 		color = { 1, 1, 1 },
 	}
 
 	-- Score and game state
 	self.score = { player = 0, cpu = 0 }
-	self.gameState = { playing = true, winner = nil, maxScore = 7 }
+	self.gameState = { playing = true, winner = nil, maxScore = self.settings.maxScore }
 	self.serveDelay = { active = true, timer = 0, duration = 1.5, flashInterval = 0.25 }
 
 	-- Screen shake state
@@ -117,7 +115,7 @@ function GameScene:load(viewport, backgroundMusic)
 		timer = 0,
 	}
 
-	-- Ball trail state (polyline-based)
+	-- Ball trail state
 	self.ballTrailPoints = {}
 	self.ballTrailLifetime = 1
 	self.ballTrailWidthStart = 8
@@ -128,7 +126,7 @@ function GameScene:load(viewport, backgroundMusic)
 	self.soundWall = love.audio.newSource("sounds/wall_bounce.wav", "static")
 	self.soundScore = love.audio.newSource("sounds/score.wav", "static")
 
-	-- Create particle texture for paddle sparks (8x8 white square as base)
+	-- Create particle texture
 	local canvas = love.graphics.newCanvas(8, 8)
 	love.graphics.setCanvas(canvas)
 	love.graphics.setColor(1, 1, 1, 1)
@@ -142,11 +140,9 @@ function GameScene:load(viewport, backgroundMusic)
 	self.particleRightFast = love.graphics.newParticleSystem(self.particleTexture, 300)
 	self.particleRightGlow = love.graphics.newParticleSystem(self.particleTexture, 150)
 
-	-- Initialize fonts and particles with fixed sizes
 	initFonts(self)
 	initParticles(self)
 
-	-- Ensure music is playing
 	if not self.backgroundMusic:isPlaying() then
 		self.backgroundMusic:play()
 	end
@@ -189,7 +185,7 @@ function GameScene:resetGame()
 end
 
 function GameScene:startBall()
-	local speed = 200
+	local speed = self.settings.ballInitialSpeed
 	local angle = love.math.random() * math.pi / 3 + math.pi / 9
 	if love.math.random() < 0.5 then
 		angle = angle + math.pi
@@ -337,7 +333,7 @@ function GameScene:update(dt)
 		local max_angle = math.pi / 4
 		local bounce_angle = (hitPos - 0.5) * 2 * max_angle
 		local current_speed = math.sqrt(self.ball.speedX ^ 2 + self.ball.speedY ^ 2)
-		local new_speed = current_speed * 1.15
+		local new_speed = current_speed * self.settings.ballSpeedMultiplier
 		self.ball.speedX = math.cos(bounce_angle) * new_speed
 		self.ball.speedY = math.sin(bounce_angle) * new_speed
 		love.audio.play(self.soundPaddle)
@@ -363,7 +359,7 @@ function GameScene:update(dt)
 		local max_angle = math.pi / 4
 		local bounce_angle = (hitPos - 0.5) * 2 * max_angle
 		local current_speed = math.sqrt(self.ball.speedX ^ 2 + self.ball.speedY ^ 2)
-		local new_speed = current_speed * 1.15
+		local new_speed = current_speed * self.settings.ballSpeedMultiplier
 		self.ball.speedX = -math.cos(bounce_angle) * new_speed
 		self.ball.speedY = math.sin(bounce_angle) * new_speed
 		love.audio.play(self.soundPaddle)
