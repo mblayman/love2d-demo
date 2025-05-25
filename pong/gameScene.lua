@@ -55,10 +55,8 @@ end
 function GameScene:load(viewport, backgroundMusic, difficulty)
 	self.viewport = viewport
 	self.backgroundMusic = backgroundMusic
-	self.difficulty = difficulty or "normal" -- Default to normal if not specified
+	self.difficulty = difficulty or "normal"
 	self.settings = Settings.difficulties[self.difficulty]
-
-	-- Load background image based on difficulty
 	self.backgroundImage = love.graphics.newImage(self.settings.backgroundImagePath)
 
 	-- Ball properties
@@ -197,9 +195,6 @@ end
 
 function GameScene:update(dt)
 	if not self.gameState.playing then
-		if self.backgroundMusic:isPlaying() then
-			self.backgroundMusic:pause()
-		end
 		return
 	end
 
@@ -377,8 +372,8 @@ function GameScene:update(dt)
 end
 
 function GameScene:keypressed(key)
-	if not self.gameState.playing and key == "r" then
-		self:resetGame()
+	if not self.gameState.playing and key == "return" then
+		switchScene("menu") -- Return to menu
 	end
 end
 
@@ -483,9 +478,13 @@ function GameScene:draw()
 	if not self.gameState.playing then
 		love.graphics.setFont(self.winFont)
 		local message = self.gameState.winner == "player" and "Player Wins!" or "CPU Wins!"
-		love.graphics.print(message, 250, 250)
+		local messageWidth = self.winFont:getWidth(message)
+		love.graphics.print(message, (800 - messageWidth) / 2, 250) -- Centered
 		love.graphics.setFont(self.scoreFont)
-		love.graphics.print("Press R to Restart", 300, 350)
+		local continueText = "Continue"
+		local continueTextWidth = self.scoreFont:getWidth(continueText)
+		love.graphics.setColor(1, 0.9, 0) -- Yellow, matching menu active text
+		love.graphics.print(continueText, (800 - continueTextWidth) / 2, 350) -- Centered
 	end
 
 	love.graphics.pop()
