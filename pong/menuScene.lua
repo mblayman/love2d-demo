@@ -88,7 +88,8 @@ function MenuScene:draw()
 	-- Draw title
 	love.graphics.setFont(self.font)
 	love.graphics.setColor(1, 1, 1)
-	love.graphics.print("Pong Clone", 300, 150)
+	local titleWidth = self.font:getWidth("Pong Clone")
+	love.graphics.print("Pong Clone", (800 - titleWidth) / 2, 150)
 
 	-- Draw menu items
 	for i, item in ipairs(self.menuItems) do
@@ -132,7 +133,8 @@ function MenuScene:draw()
 			love.graphics.setColor(i == self.selectedIndex and { 1, 0.9, 0 } or { 1, 1, 1 })
 			love.graphics.print(hardText, hardX, y)
 		else
-			love.graphics.print(item.text, 300, y)
+			local textWidth = self.font:getWidth(item.text)
+			love.graphics.print(item.text, (800 - textWidth) / 2, y)
 		end
 	end
 end
