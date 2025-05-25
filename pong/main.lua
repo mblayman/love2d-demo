@@ -1,5 +1,6 @@
 -- main.lua
 local scenes = {
+	splash = require("splashScene"),
 	menu = require("menuScene"),
 	game = require("gameScene"),
 }
@@ -46,15 +47,15 @@ function updateViewport()
 end
 
 function love.load()
-	love.window.setTitle("Pong Clone")
+	love.window.setTitle("Space Bounce Xtreme")
 	love.window.setMode(VIRTUAL_WIDTH, VIRTUAL_HEIGHT) -- Start windowed
 	love.graphics.setBackgroundColor(0, 0, 0)
 	backgroundMusic = love.audio.newSource("sounds/background.mp3", "stream")
 	backgroundMusic:setLooping(true)
 	backgroundMusic:setVolume(0.5)
-	backgroundMusic:play()
+	-- Removed backgroundMusic:play() to delay until menu
 	updateViewport()
-	switchScene("menu")
+	switchScene("splash")
 	love.mouse.setVisible(true) -- Cursor visible in windowed mode
 end
 
