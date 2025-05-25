@@ -26,6 +26,9 @@ function MenuScene:load(viewport, backgroundMusic)
 		{
 			text = "", -- No prefix for difficulty row
 			isDifficultySelect = true,
+			action = function() -- Add action for difficulty row
+				switchScene("game", self.selectedDifficulty)
+			end,
 		},
 		{
 			text = "Quit",
