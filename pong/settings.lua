@@ -5,7 +5,7 @@ Settings.difficulties = {
 	normal = {
 		name = "Normal",
 		backgroundImagePath = "assets/background.png",
-		-- Placeholder for future settings
+		cpuPaddleColor = { 1, 1, 1 }, -- White
 		paddleSpeedPlayer = 300,
 		paddleSpeedCPU = 250,
 		ballInitialSpeed = 200,
@@ -15,7 +15,7 @@ Settings.difficulties = {
 	hard = {
 		name = "Hard",
 		backgroundImagePath = "assets/background_hard.png",
-		-- Placeholder for future settings (same as normal for now)
+		cpuPaddleColor = { 1, 0, 0 }, -- Vibrant blood red
 		paddleSpeedPlayer = 300,
 		paddleSpeedCPU = 250,
 		ballInitialSpeed = 200,

@@ -19,7 +19,7 @@ local function initParticles(self)
 	self.particleLeftFast:setSizes(2, 0)
 	self.particleLeftFast:setColors(1, 0, 1, 1, 0.5, 0, 1, 0)
 	self.particleLeftFast:setLinearAcceleration(0, -150, 0, 150)
-	self.particleLeftFast:setSpin(0, 5)
+	self.particleLeftFast:setSpin(0, 5) -- Restored
 
 	self.particleLeftGlow:setEmissionRate(0)
 	self.particleLeftGlow:setParticleLifetime(0.2, 0.3)
@@ -39,7 +39,7 @@ local function initParticles(self)
 	self.particleRightFast:setSizes(2, 0)
 	self.particleRightFast:setColors(1, 0, 1, 1, 0.5, 0, 1, 0)
 	self.particleRightFast:setLinearAcceleration(0, -150, 0, 150)
-	self.particleRightFast:setSpin(0, 5)
+	self.particleRightFast:setSpin(0, 5) -- Restored
 
 	self.particleRightGlow:setEmissionRate(0)
 	self.particleRightGlow:setParticleLifetime(0.2, 0.3)
@@ -87,7 +87,7 @@ function GameScene:load(viewport, backgroundMusic, difficulty)
 		width = 20,
 		height = 100,
 		speed = self.settings.paddleSpeedPlayer,
-		color = { 1, 1, 1 },
+		color = { 1, 1, 1 }, -- White for player
 	}
 
 	-- Right paddle (CPU)
@@ -97,7 +97,7 @@ function GameScene:load(viewport, backgroundMusic, difficulty)
 		width = 20,
 		height = 100,
 		speed = self.settings.paddleSpeedCPU,
-		color = { 1, 1, 1 },
+		color = self.settings.cpuPaddleColor, -- Use color from settings
 	}
 
 	-- Score and game state
