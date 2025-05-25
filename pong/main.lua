@@ -47,7 +47,7 @@ end
 
 function love.load()
 	love.window.setTitle("Pong Clone")
-	love.window.setMode(VIRTUAL_WIDTH, VIRTUAL_HEIGHT)
+	love.window.setMode(VIRTUAL_WIDTH, VIRTUAL_HEIGHT) -- Start windowed
 	love.graphics.setBackgroundColor(0, 0, 0)
 	backgroundMusic = love.audio.newSource("sounds/background.mp3", "stream")
 	backgroundMusic:setLooping(true)
@@ -55,6 +55,7 @@ function love.load()
 	backgroundMusic:play()
 	updateViewport()
 	switchScene("menu")
+	love.mouse.setVisible(true) -- Cursor visible in windowed mode
 end
 
 function love.resize(w, h)
@@ -69,6 +70,7 @@ function love.keypressed(key)
 		local fullscreen = not love.window.getFullscreen()
 		love.window.setFullscreen(fullscreen)
 		updateViewport()
+		love.mouse.setVisible(not fullscreen) -- Hide cursor in fullscreen, show in windowed
 	end
 	if currentScene and currentScene.keypressed then
 		currentScene:keypressed(key)
