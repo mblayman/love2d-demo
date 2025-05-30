@@ -83,9 +83,9 @@ function GameScene:load(viewport, backgroundMusic, difficulty)
 	-- Left paddle (player)
 	self.paddleLeft = {
 		x = 50,
-		y = 300 - self.settings.playerPaddleHeight / 2, -- Center vertically
+		y = 300 - self.settings.playerPaddleHeight / 2,
 		width = 20,
-		height = self.settings.playerPaddleHeight, -- Use setting
+		height = self.settings.playerPaddleHeight,
 		speed = self.settings.paddleSpeedPlayer,
 		color = { 1, 1, 1 }, -- White for player
 	}
@@ -108,7 +108,7 @@ function GameScene:load(viewport, backgroundMusic, difficulty)
 	-- Screen shake state
 	self.shake = {
 		intensity = 0,
-		maxIntensity = 5,
+		maxIntensity = self.settings.shakeMaxIntensity, -- Use setting
 		duration = 0.2,
 		timer = 0,
 	}
@@ -172,7 +172,7 @@ end
 function GameScene:resetGame()
 	self.score.player = 0
 	self.score.cpu = 0
-	self.paddleLeft.y = 300 - self.settings.playerPaddleHeight / 2 -- Center vertically
+	self.paddleLeft.y = 300 - self.settings.playerPaddleHeight / 2
 	self.paddleRight.y = 250
 	self:resetBall()
 	self.gameState.playing = true
@@ -340,7 +340,7 @@ function GameScene:update(dt)
 		self.particleLeftGlow:setPosition(self.paddleLeft.x + self.paddleLeft.width, self.ball.y)
 		self.particleLeftGlow:emit(3)
 		self.shake.timer = self.shake.duration
-		self.shake.intensity = self.shake.maxIntensity
+		self.shake.intensity = self.settings.shakeMaxIntensity -- Use setting
 		self.ball.colorLerpTimer = 0
 	end
 
@@ -366,7 +366,7 @@ function GameScene:update(dt)
 		self.particleRightGlow:setPosition(self.paddleRight.x, self.ball.y)
 		self.particleRightGlow:emit(3)
 		self.shake.timer = self.shake.duration
-		self.shake.intensity = self.shake.maxIntensity
+		self.shake.intensity = self.settings.shakeMaxIntensity -- Use setting
 		self.ball.colorLerpTimer = 0
 	end
 
