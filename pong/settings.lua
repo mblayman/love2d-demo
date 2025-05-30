@@ -11,6 +11,8 @@ Settings.difficulties = {
 		ballInitialSpeed = 200,
 		ballSpeedMultiplier = 1.15,
 		maxScore = 7,
+		ballTailColor = { 1, 0.9, 0 }, -- Yellow
+		ballTargetGlowColor = { 1, 0.9, 0 }, -- Yellow
 	},
 	hard = {
 		name = "Hard",
@@ -21,6 +23,8 @@ Settings.difficulties = {
 		ballInitialSpeed = 200,
 		ballSpeedMultiplier = 1.15,
 		maxScore = 7,
+		ballTailColor = { 1, 0, 0 }, -- Vibrant red
+		ballTargetGlowColor = { 1, 0, 0 }, -- Vibrant red
 	},
 }
 

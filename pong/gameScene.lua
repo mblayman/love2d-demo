@@ -66,8 +66,8 @@ function GameScene:load(viewport, backgroundMusic, difficulty)
 		radius = 10,
 		speedX = 0,
 		speedY = 0,
-		color = { 1, 1, 1 },
-		targetColor = { 1, 1, 1 },
+		color = { 1, 1, 1 }, -- Always start white
+		targetColor = self.settings.ballTargetGlowColor, -- Target color from settings
 		colorLerpTimer = 0,
 		colorLerpDuration = 0.5,
 		glowRadius = 0,
@@ -160,8 +160,8 @@ function GameScene:resetBall()
 	self.serveDelay.active = true
 	self.serveDelay.timer = 0
 	self.ball.lastHitPaddle = nil
-	self.ball.color = { 1, 1, 1 }
-	self.ball.targetColor = { 1, 1, 1 }
+	self.ball.color = { 1, 1, 1 } -- Reset to white
+	self.ball.targetColor = self.settings.ballTargetGlowColor -- Set target from settings
 	self.ball.colorLerpTimer = 0
 	self.ball.glowRadius = 0
 	self.ball.targetGlowRadius = 0
@@ -233,27 +233,31 @@ function GameScene:update(dt)
 	end
 	self.ball.wasStationary = (speedMagnitude == 0)
 
+	-- Update ball color and glow based on speed
 	local minSpeed = 200
 	local maxSpeed = 500
 	local t = math.min(math.max((speedMagnitude - minSpeed) / (maxSpeed - minSpeed), 0), 1)
-	local targetR = 1
-	local targetG = 1 - (0.1 * t)
-	local targetB = 1 - t
-	self.ball.targetColor = { targetR, targetG, targetB }
+	local targetR, targetG, targetB = unpack(self.settings.ballTargetGlowColor) -- Target glow color
+	-- Interpolate from white (1, 1, 1) to target color based on speed
+	self.ball.targetColor = {
+		1 + (targetR - 1) * t, -- Start at 1 (white), move to targetR
+		1 + (targetG - 1) * t, -- Start at 1 (white), move to targetG
+		1 + (targetB - 1) * t, -- Start at 1 (white), move to targetB
+	}
 	self.ball.targetGlowRadius = 0 + (15 * t)
 	self.ball.targetGlowIntensity = 0 + (0.5 * t)
 
 	if self.ball.colorLerpTimer < self.ball.colorLerpDuration then
 		self.ball.colorLerpTimer = self.ball.colorLerpTimer + dt
 		local lerpT = math.min(self.ball.colorLerpTimer / self.ball.colorLerpDuration, 1)
-		self.ball.color[1] = self.ball.color[1] + (targetR - self.ball.color[1]) * lerpT
-		self.ball.color[2] = self.ball.color[2] + (targetG - self.ball.color[2]) * lerpT
-		self.ball.color[3] = self.ball.color[3] + (targetB - self.ball.color[3]) * lerpT
+		self.ball.color[1] = self.ball.color[1] + (self.ball.targetColor[1] - self.ball.color[1]) * lerpT
+		self.ball.color[2] = self.ball.color[2] + (self.ball.targetColor[2] - self.ball.color[2]) * lerpT
+		self.ball.color[3] = self.ball.color[3] + (self.ball.targetColor[3] - self.ball.color[3]) * lerpT
 		self.ball.glowRadius = self.ball.glowRadius + (self.ball.targetGlowRadius - self.ball.glowRadius) * lerpT
 		self.ball.glowIntensity = self.ball.glowIntensity
 			+ (self.ball.targetGlowIntensity - self.ball.glowIntensity) * lerpT
 	else
-		self.ball.color = { targetR, targetG, targetB }
+		self.ball.color = { self.ball.targetColor[1], self.ball.targetColor[2], self.ball.targetColor[3] }
 		self.ball.glowRadius = self.ball.targetGlowRadius
 		self.ball.glowIntensity = self.ball.targetGlowIntensity
 	end
@@ -395,6 +399,7 @@ function GameScene:draw()
 	love.graphics.setColor(1, 1, 1)
 	love.graphics.draw(self.backgroundImage, bgOffsetX, 0, 0, scale, scale)
 
+	-- Draw ball trail
 	if #self.ballTrailPoints > 1 then
 		local currentTime = love.timer.getTime()
 		for i = 1, #self.ballTrailPoints - 1 do
@@ -405,8 +410,9 @@ function GameScene:draw()
 				local fade = 1 - (age / self.ballTrailLifetime)
 				local width = self.ballTrailWidthStart
 					+ (self.ballTrailWidthEnd - self.ballTrailWidthStart) * (1 - fade)
-				local r, g, b, a = 1, 0.9, 0, fade
-				love.graphics.setColor(r, g, b, a)
+				-- Use tail color from settings
+				local r, g, b = unpack(self.settings.ballTailColor)
+				love.graphics.setColor(r, g, b, fade)
 				local dx = p2.x - p1.x
 				local dy = p2.y - p1.y
 				local length = math.sqrt(dx * dx + dy * dy)
@@ -425,6 +431,7 @@ function GameScene:draw()
 		end
 	end
 
+	-- Draw ball glow
 	if not self.serveDelay.active or math.floor(self.serveDelay.timer / self.serveDelay.flashInterval) % 2 == 0 then
 		if self.ball.glowRadius > 0 and self.ball.glowIntensity > 0 then
 			love.graphics.setBlendMode("add", "alphamultiply")
@@ -433,18 +440,22 @@ function GameScene:draw()
 				local distance = r - self.ball.radius
 				local t = distance / self.ball.glowRadius
 				local alpha = self.ball.glowIntensity * (1 - t) * (1 - t)
-				love.graphics.setColor(self.ball.color[1], self.ball.color[2], self.ball.color[3], alpha)
+				-- Use glow color from settings if available, else use ball.color
+				local color = self.settings.ballGlowColor or self.ball.color
+				love.graphics.setColor(color[1], color[2], color[3], alpha)
 				love.graphics.circle("line", self.ball.x, self.ball.y, r)
 			end
 			love.graphics.setBlendMode("alpha")
 		end
 	end
 
+	-- Draw ball
 	love.graphics.setColor(self.ball.color)
 	if not self.serveDelay.active or math.floor(self.serveDelay.timer / self.serveDelay.flashInterval) % 2 == 0 then
 		love.graphics.circle("fill", self.ball.x, self.ball.y, self.ball.radius)
 	end
 
+	-- Draw paddles
 	love.graphics.setColor(self.paddleLeft.color)
 	love.graphics.rectangle("fill", self.paddleLeft.x, self.paddleLeft.y, self.paddleLeft.width, self.paddleLeft.height)
 	love.graphics.setColor(self.paddleRight.color)
@@ -456,12 +467,14 @@ function GameScene:draw()
 		self.paddleRight.height
 	)
 
+	-- Draw particles
 	love.graphics.setColor(1, 1, 1, 1)
 	love.graphics.draw(self.particleLeftFast)
 	love.graphics.draw(self.particleLeftGlow)
 	love.graphics.draw(self.particleRightFast)
 	love.graphics.draw(self.particleRightGlow)
 
+	-- Draw score
 	love.graphics.setFont(self.scoreFont)
 	love.graphics.setColor(0, 0, 0)
 	love.graphics.print("Player: " .. self.score.player, 80 + 2, 40 + 2)
@@ -475,6 +488,7 @@ function GameScene:draw()
 	love.graphics.setColor(1, 1, 1)
 	love.graphics.print(cpuScoreText, cpuScoreX, 40)
 
+	-- Draw win message
 	if not self.gameState.playing then
 		love.graphics.setFont(self.winFont)
 		local message = self.gameState.winner == "player" and "Player Wins!" or "CPU Wins!"
