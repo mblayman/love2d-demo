@@ -19,7 +19,7 @@ local function initParticles(self)
 	self.particleLeftFast:setSizes(2, 0)
 	self.particleLeftFast:setColors(1, 0, 1, 1, 0.5, 0, 1, 0)
 	self.particleLeftFast:setLinearAcceleration(0, -150, 0, 150)
-	self.particleLeftFast:setSpin(0, 5) -- Restored
+	self.particleLeftFast:setSpin(0, 5)
 
 	self.particleLeftGlow:setEmissionRate(0)
 	self.particleLeftGlow:setParticleLifetime(0.2, 0.3)
@@ -39,7 +39,7 @@ local function initParticles(self)
 	self.particleRightFast:setSizes(2, 0)
 	self.particleRightFast:setColors(1, 0, 1, 1, 0.5, 0, 1, 0)
 	self.particleRightFast:setLinearAcceleration(0, -150, 0, 150)
-	self.particleRightFast:setSpin(0, 5) -- Restored
+	self.particleRightFast:setSpin(0, 5)
 
 	self.particleRightGlow:setEmissionRate(0)
 	self.particleRightGlow:setParticleLifetime(0.2, 0.3)
@@ -67,7 +67,7 @@ function GameScene:load(viewport, backgroundMusic, difficulty)
 		speedX = 0,
 		speedY = 0,
 		color = { 1, 1, 1 }, -- Always start white
-		targetColor = self.settings.ballTargetGlowColor, -- Target color from settings
+		targetColor = self.settings.ballTargetGlowColor,
 		colorLerpTimer = 0,
 		colorLerpDuration = 0.5,
 		glowRadius = 0,
@@ -83,9 +83,9 @@ function GameScene:load(viewport, backgroundMusic, difficulty)
 	-- Left paddle (player)
 	self.paddleLeft = {
 		x = 50,
-		y = 250,
+		y = 300 - self.settings.playerPaddleHeight / 2, -- Center vertically
 		width = 20,
-		height = 100,
+		height = self.settings.playerPaddleHeight, -- Use setting
 		speed = self.settings.paddleSpeedPlayer,
 		color = { 1, 1, 1 }, -- White for player
 	}
@@ -97,7 +97,7 @@ function GameScene:load(viewport, backgroundMusic, difficulty)
 		width = 20,
 		height = 100,
 		speed = self.settings.paddleSpeedCPU,
-		color = self.settings.cpuPaddleColor, -- Use color from settings
+		color = self.settings.cpuPaddleColor,
 	}
 
 	-- Score and game state
@@ -161,7 +161,7 @@ function GameScene:resetBall()
 	self.serveDelay.timer = 0
 	self.ball.lastHitPaddle = nil
 	self.ball.color = { 1, 1, 1 } -- Reset to white
-	self.ball.targetColor = self.settings.ballTargetGlowColor -- Set target from settings
+	self.ball.targetColor = self.settings.ballTargetGlowColor
 	self.ball.colorLerpTimer = 0
 	self.ball.glowRadius = 0
 	self.ball.targetGlowRadius = 0
@@ -172,7 +172,7 @@ end
 function GameScene:resetGame()
 	self.score.player = 0
 	self.score.cpu = 0
-	self.paddleLeft.y = 250
+	self.paddleLeft.y = 300 - self.settings.playerPaddleHeight / 2 -- Center vertically
 	self.paddleRight.y = 250
 	self:resetBall()
 	self.gameState.playing = true
@@ -237,12 +237,11 @@ function GameScene:update(dt)
 	local minSpeed = 200
 	local maxSpeed = 500
 	local t = math.min(math.max((speedMagnitude - minSpeed) / (maxSpeed - minSpeed), 0), 1)
-	local targetR, targetG, targetB = unpack(self.settings.ballTargetGlowColor) -- Target glow color
-	-- Interpolate from white (1, 1, 1) to target color based on speed
+	local targetR, targetG, targetB = unpack(self.settings.ballTargetGlowColor)
 	self.ball.targetColor = {
-		1 + (targetR - 1) * t, -- Start at 1 (white), move to targetR
-		1 + (targetG - 1) * t, -- Start at 1 (white), move to targetG
-		1 + (targetB - 1) * t, -- Start at 1 (white), move to targetB
+		1 + (targetR - 1) * t,
+		1 + (targetG - 1) * t,
+		1 + (targetB - 1) * t,
 	}
 	self.ball.targetGlowRadius = 0 + (15 * t)
 	self.ball.targetGlowIntensity = 0 + (0.5 * t)
@@ -377,7 +376,7 @@ end
 
 function GameScene:keypressed(key)
 	if not self.gameState.playing and key == "return" then
-		switchScene("menu") -- Return to menu
+		switchScene("menu")
 	end
 end
 
@@ -410,7 +409,6 @@ function GameScene:draw()
 				local fade = 1 - (age / self.ballTrailLifetime)
 				local width = self.ballTrailWidthStart
 					+ (self.ballTrailWidthEnd - self.ballTrailWidthStart) * (1 - fade)
-				-- Use tail color from settings
 				local r, g, b = unpack(self.settings.ballTailColor)
 				love.graphics.setColor(r, g, b, fade)
 				local dx = p2.x - p1.x
@@ -440,7 +438,6 @@ function GameScene:draw()
 				local distance = r - self.ball.radius
 				local t = distance / self.ball.glowRadius
 				local alpha = self.ball.glowIntensity * (1 - t) * (1 - t)
-				-- Use glow color from settings if available, else use ball.color
 				local color = self.settings.ballGlowColor or self.ball.color
 				love.graphics.setColor(color[1], color[2], color[3], alpha)
 				love.graphics.circle("line", self.ball.x, self.ball.y, r)
@@ -493,12 +490,12 @@ function GameScene:draw()
 		love.graphics.setFont(self.winFont)
 		local message = self.gameState.winner == "player" and "Player Wins!" or "CPU Wins!"
 		local messageWidth = self.winFont:getWidth(message)
-		love.graphics.print(message, (800 - messageWidth) / 2, 250) -- Centered
+		love.graphics.print(message, (800 - messageWidth) / 2, 250)
 		love.graphics.setFont(self.scoreFont)
 		local continueText = "Continue"
 		local continueTextWidth = self.scoreFont:getWidth(continueText)
-		love.graphics.setColor(1, 0.9, 0) -- Yellow, matching menu active text
-		love.graphics.print(continueText, (800 - continueTextWidth) / 2, 350) -- Centered
+		love.graphics.setColor(1, 0.9, 0)
+		love.graphics.print(continueText, (800 - continueTextWidth) / 2, 350)
 	end
 
 	love.graphics.pop()
